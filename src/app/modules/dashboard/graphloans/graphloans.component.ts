@@ -1,12 +1,11 @@
 import { Component } from '@angular/core';
 
-import { CommonModule } from '@angular/common';
 import { ChartModule } from 'primeng/chart';
 import { FluidModule } from 'primeng/fluid';
 
 @Component({
     selector: 'app-graphloans',
-    imports: [CommonModule, ChartModule, FluidModule],
+    imports: [ChartModule, FluidModule],
     templateUrl: './graphloans.component.html',
     styleUrl: './graphloans.component.scss'
 })

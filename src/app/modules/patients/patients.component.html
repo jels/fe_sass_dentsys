@@ -1,0 +1,201 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-users"></i> Pacientes</h1>
+            <p class="page-subtitle">Gestión de fichas y datos de pacientes</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nuevo paciente" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+    <div class="filter-bar">
+        <p-iconfield>
+            <p-inputicon class="pi pi-search" />
+            <input pInputText [(ngModel)]="search" placeholder="Buscar por nombre, CI, teléfono o email..."
+                class="filter-search" />
+        </p-iconfield>
+        <p-select [options]="genderOptions" [(ngModel)]="filterGender" optionLabel="label" optionValue="value"
+            placeholder="Género" styleClass="filter-sel" (onChange)="load()" />
+        <p-select [options]="activeOptions" [(ngModel)]="filterActive" optionLabel="label" optionValue="value"
+            styleClass="filter-sel" (onChange)="load()" />
+        <span class="filter-count">
+            {{ filtered.length }} paciente{{ filtered.length !== 1 ? 's' : '' }}
+        </span>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="3.5rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="filtered" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+            [paginator]="filtered.length > 15" [rows]="15">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Paciente</th>
+                    <th style="width:120px">CI / Doc.</th>
+                    <th style="width:90px">Género</th>
+                    <th style="width:90px">Edad</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th class="text-center" style="width:90px">Estado</th>
+                    <th class="text-center" style="width:120px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-p>
+                <tr [class.row-inactive]="!p.active">
+                    <td>
+                        <div class="patient-name-cell">
+                            <div class="patient-avatar" [class.patient-avatar--m]="p.gender === 'M'"
+                                [class.patient-avatar--f]="p.gender === 'F'">
+                                {{ p.firstName[0] }}{{ p.lastName[0] }}
+                            </div>
+                            <div>
+                                <span class="name-primary">{{ p.fullName }}</span>
+                                @if (p.allergies) {
+                                <span class="allergy-badge" pTooltip="Alergias: {{ p.allergies }}">
+                                    <i class="pi pi-exclamation-triangle"></i> Alergias
+                                </span>
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <td class="mono">{{ p.idNumber ?? '—' }}</td>
+                    <td>
+                        <span class="gender-label">
+                            <i [class]="getGenderIcon(p.gender)"></i>
+                            {{ p.gender ?? '—' }}
+                        </span>
+                    </td>
+                    <td>{{ calcAge(p.birthDate) }}</td>
+                    <td>{{ p.phone ?? '—' }}</td>
+                    <td>{{ p.email ?? '—' }}</td>
+                    <td class="text-center">
+                        <p-tag [value]="p.active ? 'Activo' : 'Inactivo'"
+                            [severity]="p.active ? 'success' : 'secondary'" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-folder-open" severity="info" [text]="true" pTooltip="Ver ficha"
+                                (click)="goToDetail(p)"></button>
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(p)"></button>
+                            <button pButton [icon]="p.active ? 'pi pi-ban' : 'pi pi-check'"
+                                [severity]="p.active ? 'danger' : 'success'" [text]="true"
+                                [pTooltip]="p.active ? 'Desactivar' : 'Activar'" (click)="confirmToggle(p)"></button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-users"></i>
+                            <p>No hay pacientes registrados</p>
+                            <p-button icon="pi pi-plus" label="Registrar paciente" size="small"
+                                (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Formulario ─────────────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Paciente' : 'Nuevo Paciente'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '620px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="patientForm" class="form-body">
+
+        <!-- Datos personales -->
+        <p class="form-section-title">Datos personales</p>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Nombre <span class="req">*</span></label>
+                <input pInputText formControlName="firstName" class="w-full" />
+                @if (isInvalid('firstName')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Apellido <span class="req">*</span></label>
+                <input pInputText formControlName="lastName" class="w-full" />
+                @if (isInvalid('lastName')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-3">
+            <div class="field">
+                <label>CI / Documento</label>
+                <input pInputText formControlName="idNumber" placeholder="Ej: 1234567" class="w-full mono" />
+            </div>
+            <div class="field">
+                <label>Fecha de nacimiento</label>
+                <p-datepicker formControlName="birthDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full"
+                    appendTo="body" [maxDate]="today" />
+            </div>
+            <div class="field">
+                <label>Género</label>
+                <p-select formControlName="gender" [options]="genderOptions" optionLabel="label" optionValue="value"
+                    styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        <!-- Contacto -->
+        <p class="form-section-title">Contacto</p>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Teléfono</label>
+                <input pInputText formControlName="phone" placeholder="Ej: 0981 000 000" class="w-full" />
+            </div>
+            <div class="field">
+                <label>Email</label>
+                <input pInputText formControlName="email" type="email" class="w-full" />
+                @if (isInvalid('email')) { <small class="error-msg">Email inválido</small> }
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Dirección</label>
+            <input pInputText formControlName="address" class="w-full" />
+        </div>
+
+        <!-- Clínico -->
+        <p class="form-section-title">Información clínica</p>
+
+        <div class="field">
+            <label>Alergias</label>
+            <textarea pTextarea formControlName="allergies" rows="2"
+                placeholder="Medicamentos, materiales u otras alergias conocidas..."
+                class="w-full resize-none"></textarea>
+        </div>
+
+        <div class="field">
+            <label>Notas clínicas</label>
+            <textarea pTextarea formControlName="clinicalNotes" rows="2"
+                placeholder="Observaciones médicas relevantes..." class="w-full resize-none"></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Registrar paciente'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

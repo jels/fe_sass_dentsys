@@ -1,0 +1,344 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-book"></i> Libro Caja</h1>
+            <p class="page-subtitle">Registro de movimientos de efectivo y cuentas</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-cog" label="Conceptos" severity="secondary" [outlined]="true"
+                (onClick)="showConcepts.set(true)" />
+            <p-button icon="pi pi-arrow-down-left" label="Registrar ingreso" severity="success"
+                (onClick)="openCreate('INCOME')" />
+            <p-button icon="pi pi-arrow-up-right" label="Registrar egreso" severity="danger" [outlined]="true"
+                (onClick)="openCreate('EXPENSE')" />
+        </div>
+    </div>
+
+    <!-- ── Stats del día ────────────────────────────────────────────────────── -->
+    @if (loadingStats()) {
+    <div class="stats-grid">
+        @for (i of [1,2,3,4]; track i) { <p-skeleton height="88px" borderRadius="0.75rem" /> }
+    </div>
+    } @else if (stats(); as s) {
+    <div class="stats-grid">
+        <div class="stat-card stat-income">
+            <div class="stat-icon"><i class="pi pi-arrow-down-left"></i></div>
+            <div class="stat-body">
+                <span class="stat-value">{{ s.todayIncome | guaranies }}</span>
+                <span class="stat-label">Ingresos hoy</span>
+                <span class="stat-sub">{{ s.todayMovements }} movimientos</span>
+            </div>
+        </div>
+        <div class="stat-card stat-expense">
+            <div class="stat-icon"><i class="pi pi-arrow-up-right"></i></div>
+            <div class="stat-body">
+                <span class="stat-value">{{ s.todayExpense | guaranies }}</span>
+                <span class="stat-label">Egresos hoy</span>
+            </div>
+        </div>
+        <div class="stat-card" [class.stat-positive]="s.todayBalance >= 0" [class.stat-negative]="s.todayBalance < 0">
+            <div class="stat-icon"><i class="pi pi-wallet"></i></div>
+            <div class="stat-body">
+                <span class="stat-value">{{ s.todayBalance | guaranies }}</span>
+                <span class="stat-label">Balance hoy</span>
+            </div>
+        </div>
+        <div class="stat-card stat-month">
+            <div class="stat-icon"><i class="pi pi-calendar"></i></div>
+            <div class="stat-body">
+                <span class="stat-value">{{ s.monthBalance | guaranies }}</span>
+                <span class="stat-label">Balance del mes</span>
+                <span class="stat-sub">↑ {{ s.monthIncome | guaranies }} · ↓ {{ s.monthExpense | guaranies }}</span>
+            </div>
+        </div>
+    </div>
+    }
+
+    <!-- ── Barra de fecha y filtros ─────────────────────────────────────────── -->
+    <div class="filter-bar">
+        <div class="date-nav">
+            <button pButton icon="pi pi-chevron-left" severity="secondary" [text]="true" pTooltip="Día anterior"
+                (click)="prevDay()"></button>
+            <p-datepicker [(ngModel)]="filterDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                (onSelect)="loadStats(); loadMovements()" styleClass="date-picker-input" />
+            <button pButton icon="pi pi-chevron-right" severity="secondary" [text]="true" pTooltip="Día siguiente"
+                (click)="nextDay()"></button>
+            @if (!isToday) {
+            <button pButton label="Hoy" severity="secondary" [outlined]="true" size="small"
+                (click)="goToday()"></button>
+            }
+        </div>
+
+        <p-divider layout="vertical" />
+
+        <p-select [options]="typeFilterOpts" [(ngModel)]="filterType" optionLabel="label" optionValue="value"
+            placeholder="Tipo" styleClass="filter-sel" (onChange)="loadMovements()" />
+
+        <p-select [options]="conceptFilterOpts" [(ngModel)]="filterConcept" optionLabel="label" optionValue="value"
+            placeholder="Concepto" styleClass="filter-sel" (onChange)="loadMovements()" />
+    </div>
+
+    <!-- ── Resumen del período filtrado ─────────────────────────────────────── -->
+    <div class="day-summary">
+        <div class="summary-item income">
+            <i class="pi pi-arrow-down-left"></i>
+            <span>Ingresos: <strong>{{ totalIncome | guaranies }}</strong></span>
+        </div>
+        <div class="summary-item expense">
+            <i class="pi pi-arrow-up-right"></i>
+            <span>Egresos: <strong>{{ totalExpense | guaranies }}</strong></span>
+        </div>
+        <div class="summary-sep"></div>
+        <div class="summary-item" [class.balance-pos]="balance >= 0" [class.balance-neg]="balance < 0">
+            <i class="pi pi-wallet"></i>
+            <span>Balance: <strong>{{ balance | guaranies }}</strong></span>
+        </div>
+        <span class="summary-count">{{ movements().length }} movimiento{{ movements().length !== 1 ? 's' : '' }}</span>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loadingMovements()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="3rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="movements()" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+            [paginator]="movements().length > 20" [rows]="20">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:110px">Tipo</th>
+                    <th>Concepto</th>
+                    <th style="width:120px">Origen</th>
+                    <th>Descripción</th>
+                    <th style="width:120px">Método</th>
+                    <th>Vinculado</th>
+                    <th class="text-right" style="width:150px">Monto</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-m>
+                <tr>
+                    <td>
+                        <p-tag [value]="m.movementType === 'INCOME' ? 'Ingreso' : 'Egreso'"
+                            [severity]="m.movementType === 'INCOME' ? 'success' : 'danger'" />
+                    </td>
+                    <td>
+                        <span class="concept-name">{{ m.conceptName }}</span>
+                    </td>
+                    <td>
+                        <span class="origin-badge" [class.origin-auto]="m.origin !== 'MANUAL'"
+                            [class.origin-manual]="m.origin === 'MANUAL'">
+                            {{ getOriginLabel(m.origin) }}
+                        </span>
+                    </td>
+                    <td>{{ m.description ?? '—' }}</td>
+                    <td>
+                        <span class="method-text">
+                            <i class="pi" [ngClass]="{
+                                    'pi-wallet':                 m.paymentMethod === 'CASH',
+                                    'pi-arrow-right-arrow-left': m.paymentMethod === 'TRANSFER',
+                                    'pi-credit-card':            m.paymentMethod === 'CARD',
+                                    'pi-file':                   m.paymentMethod === 'CHECK'
+                                }"></i>
+                            {{ getMethodLabel(m.paymentMethod) }}
+                        </span>
+                    </td>
+                    <td>
+                        @if (m.invoiceNumber) {
+                        <span class="link-ref mono">FAC {{ m.invoiceNumber }}</span>
+                        } @else if (m.receiptNumber) {
+                        <span class="link-ref mono">REC {{ m.receiptNumber }}</span>
+                        } @else {
+                        <span class="muted">—</span>
+                        }
+                    </td>
+                    <td class="text-right">
+                        <span class="amount-cell" [class.amount-income]="m.movementType === 'INCOME'"
+                            [class.amount-expense]="m.movementType === 'EXPENSE'">
+                            {{ m.movementType === 'INCOME' ? '+' : '−' }}{{ m.amount | guaranies }}
+                        </span>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="pi pi-book"></i>
+                            <p>Sin movimientos para este período</p>
+                            <div class="empty-actions">
+                                <p-button icon="pi pi-arrow-down-left" label="Registrar ingreso" severity="success"
+                                    size="small" (onClick)="openCreate('INCOME')" />
+                                <p-button icon="pi pi-arrow-up-right" label="Registrar egreso" severity="danger"
+                                    [outlined]="true" size="small" (onClick)="openCreate('EXPENSE')" />
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: REGISTRAR MOVIMIENTO MANUAL                                         -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog [header]="movementForm.get('movementType')?.value === 'INCOME' ? 'Registrar Ingreso' : 'Registrar Egreso'"
+    [(visible)]="showForm" [modal]="true" [draggable]="false" [style]="{ width: '540px', maxWidth: '95vw' }"
+    (onHide)="showForm.set(false)">
+
+    <form [formGroup]="movementForm" class="form-body">
+
+        <div class="field">
+            <label>Tipo de movimiento <span class="req">*</span></label>
+            <div class="type-toggle">
+                <button type="button" class="type-btn"
+                    [class.type-btn--income]="movementForm.get('movementType')?.value === 'INCOME'"
+                    (click)="movementForm.patchValue({ movementType: 'INCOME', idCashConcept: null })">
+                    <i class="pi pi-arrow-down-left"></i> Ingreso
+                </button>
+                <button type="button" class="type-btn"
+                    [class.type-btn--expense]="movementForm.get('movementType')?.value === 'EXPENSE'"
+                    (click)="movementForm.patchValue({ movementType: 'EXPENSE', idCashConcept: null })">
+                    <i class="pi pi-arrow-up-right"></i> Egreso
+                </button>
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Concepto <span class="req">*</span></label>
+                <p-select formControlName="idCashConcept" [options]="conceptOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar concepto" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('idCashConcept')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Fecha y hora <span class="req">*</span></label>
+                <p-datepicker formControlName="movementDatetime" [showTime]="true" hourFormat="24" dateFormat="dd/mm/yy"
+                    [showIcon]="true" styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Monto (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="amount" mode="decimal" [minFractionDigits]="0" [min]="1"
+                    styleClass="w-full" />
+                @if (isInvalid('amount')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Método de pago <span class="req">*</span></label>
+                <p-select formControlName="paymentMethod" [options]="payMethodOptions" optionLabel="label"
+                    optionValue="value" styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Descripción</label>
+            <textarea pTextarea formControlName="description" rows="2" placeholder="Detalle del movimiento..."
+                class="w-full resize-none"></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button
+            [label]="movementForm.get('movementType')?.value === 'INCOME' ? 'Registrar ingreso' : 'Registrar egreso'"
+            [icon]="movementForm.get('movementType')?.value === 'INCOME' ? 'pi pi-arrow-down-left' : 'pi pi-arrow-up-right'"
+            [severity]="movementForm.get('movementType')?.value === 'INCOME' ? 'success' : 'danger'"
+            [loading]="saving()" (onClick)="submitMovement()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: GESTIÓN DE CONCEPTOS                                                -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Conceptos de Caja" [(visible)]="showConcepts" [modal]="true" [draggable]="false"
+    [style]="{ width: '600px', maxWidth: '95vw' }">
+
+    <div class="concepts-header">
+        <span class="concepts-count">{{ concepts().length }} concepto{{ concepts().length !== 1 ? 's' : '' }}</span>
+        <p-button icon="pi pi-plus" label="Nuevo concepto" size="small" (onClick)="openCreateConcept()" />
+    </div>
+
+    <p-table [value]="concepts()" styleClass="p-datatable-sm" [rowHover]="true">
+        <ng-template pTemplate="header">
+            <tr>
+                <th>Nombre</th>
+                <th style="width:120px">Tipo</th>
+                <th class="text-center" style="width:90px">Estado</th>
+                <th class="text-center" style="width:100px">Acciones</th>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="body" let-c>
+            <tr [class.row-inactive]="!c.active">
+                <td>{{ c.name }}</td>
+                <td>
+                    <p-tag [value]="c.movementType === 'INCOME' ? 'Ingreso' : 'Egreso'"
+                        [severity]="c.movementType === 'INCOME' ? 'success' : 'danger'" />
+                </td>
+                <td class="text-center">
+                    <p-tag [value]="c.active ? 'Activo' : 'Inactivo'" [severity]="c.active ? 'success' : 'secondary'" />
+                </td>
+                <td class="text-center">
+                    <div class="action-buttons">
+                        <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                            (click)="openEditConcept(c)"></button>
+                        <button pButton [icon]="c.active ? 'pi pi-ban' : 'pi pi-check'"
+                            [severity]="c.active ? 'danger' : 'success'" [text]="true"
+                            [pTooltip]="c.active ? 'Desactivar' : 'Activar'" (click)="confirmToggleConcept(c)"></button>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+        <ng-template pTemplate="emptymessage">
+            <tr>
+                <td colspan="4">
+                    <div class="empty-state">
+                        <i class="pi pi-tag"></i>
+                        <p>No hay conceptos. Creá el primero.</p>
+                    </div>
+                </td>
+            </tr>
+        </ng-template>
+    </p-table>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="showConcepts.set(false)" />
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Formulario Concepto ─────────────────────────────────────────────── -->
+<p-dialog [header]="isConceptEdit() ? 'Editar Concepto' : 'Nuevo Concepto'" [(visible)]="showConceptForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '400px' }" (onHide)="showConceptForm.set(false)">
+
+    <form [formGroup]="conceptForm" class="form-body">
+        <div class="field">
+            <label>Nombre del concepto <span class="req">*</span></label>
+            <input pInputText formControlName="name" class="w-full"
+                placeholder="Ej: Honorarios, Insumos, Alquiler..." />
+            @if (isInvalid('name', conceptForm)) { <small class="error-msg">Requerido</small> }
+        </div>
+        <div class="field">
+            <label>Tipo <span class="req">*</span></label>
+            <p-select formControlName="movementType" [options]="typeOptions" optionLabel="label" optionValue="value"
+                styleClass="w-full" appendTo="body" />
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showConceptForm.set(false)" />
+        <p-button [label]="isConceptEdit() ? 'Actualizar' : 'Crear concepto'" icon="pi pi-check"
+            [loading]="savingConcept()" (onClick)="submitConcept()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

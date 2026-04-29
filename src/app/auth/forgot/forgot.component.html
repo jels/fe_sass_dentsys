@@ -1,38 +1,52 @@
+<p-toast position="top-right" />
 <app-floatingconfigurator />
-<div
-    class="bg-surface-50 dark:bg-surface-950 flex items-center justify-center min-h-screen min-w-[100vw] overflow-hidden">
-    <div class="flex flex-col items-center justify-center">
-        <div
-            style="border-radius: 56px; padding: 0.3rem; background: linear-gradient(180deg, var(--primary-color) 10%, rgba(33, 150, 243, 0) 30%)">
-            <div class="w-full bg-surface-0 dark:bg-surface-900 py-20 px-8 sm:px-20" style="border-radius: 53px">
-                <div class="text-center mb-8">
 
-                    <img src="./assets/img/logos/Avancemos512.png" alt="Logo"
-                        class="h-20 w-auto mb-8 shrink-0 mx-auto" />
-                    <div class="text-surface-900 dark:text-surface-0 text-3xl font-medium mb-4">Recuperar contraseña
-                    </div>
-                    <span class="text-muted-color font-medium">Complete su Email para recuperar la cuenta</span>
-                </div>
+<div class="login-wrapper">
+    <div class="login-card-outer">
+        <div class="login-card">
 
-                <div>
-
-                    <p-floatlabel>
-                        <input pInputText id="email" type="email" [(ngModel)]="email" class="w-full md:w-[30rem]" />
-                        <label class="block text-surface-900 dark:text-surface-0 text-xl font-medium mb-2"
-                            for="username">Email</label>
-                    </p-floatlabel>
-                    <br>
-                    <div class="flex items-center justify-between mt-2 mb-8 gap-8">
-
-                        <span class="font-medium no-underline ml-2 text-right cursor-pointer text-primary">
-                            <a (click)="login()">¿Te recordaste tu contraseña?</a>
-                        </span>
-                    </div>
-
-                    <p-button label="Recuperar Contraseña" styleClass="w-full" (click)="sendForgot()"></p-button>
-
-                </div>
+            @if (!sent()) {
+            <!-- Header -->
+            <div class="login-header">
+                <img src="./assets/img/logos/dentsys-logo.png" alt="DENTSYS" class="login-logo" />
+                <h2 class="login-title">Recuperar contraseña</h2>
+                <p class="login-subtitle">Ingresá tu email y te enviaremos las instrucciones.</p>
             </div>
+
+            <!-- Form -->
+            <form [formGroup]="forgotForm" (ngSubmit)="onSubmit()" novalidate>
+
+                <div class="login-field">
+                    <p-floatlabel>
+                        <input pInputText id="email" formControlName="email" class="w-full" autocomplete="email"
+                            type="email" />
+                        <label for="email">Correo electrónico</label>
+                    </p-floatlabel>
+                    @if (emailInvalid) {
+                    <small class="login-error">Ingresá un email válido.</small>
+                    }
+                </div>
+
+                <p-button label="Enviar instrucciones" type="submit" styleClass="w-full" [loading]="loading()" />
+
+            </form>
+            } @else {
+            <!-- Estado enviado -->
+            <div class="login-header">
+                <i class="pi pi-envelope-open"
+                    style="font-size: 3rem; color: var(--p-primary-color); margin-bottom: 1rem;"></i>
+                <h2 class="login-title">¡Revisá tu correo!</h2>
+                <p class="login-subtitle">Si el email está registrado, recibirás las instrucciones para restablecer tu
+                    contraseña.</p>
+            </div>
+            }
+
+            <div class="login-back">
+                <a (click)="goToLogin()">
+                    <i class="pi pi-arrow-left"></i> Volver al inicio de sesión
+                </a>
+            </div>
+
         </div>
     </div>
 </div>

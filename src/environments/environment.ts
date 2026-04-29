@@ -1,8 +1,11 @@
 export const environment = {
     production: false,
-    apiUrl: 'https://demo.com.py/',
-    viewUrl: 'https://demo.com.py',
-    presetToken: 'Crear un token predeterminado aquí',
-    tokenExpiration: 3600000, // 1 hora en milisegundos
+    apiUrl: 'http://localhost:8080/api',
+    appName: 'DENTSYS',
+    version: '1.0.0',
+    tokenKey: 'dentsys_token',
+    refreshTokenKey: 'dentsys_refresh_token',
+    companyKey: 'dentsys_company',
+    branchKey: 'dentsys_branch',
     refreshTokenExpiration: 86400000 // 24 horas en milisegundos
 };

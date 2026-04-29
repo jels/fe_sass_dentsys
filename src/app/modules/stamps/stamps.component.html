@@ -1,0 +1,227 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-verified"></i> Timbrados SET</h1>
+            <p class="page-subtitle">Gestión de timbrados habilitados por la SET de Paraguay</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nuevo timbrado" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3]; track i) { <p-skeleton height="4rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="stamps()" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Nro. Timbrado</th>
+                    <th>Establecimiento / Punto</th>
+                    <th>Tipo documento</th>
+                    <th>Vigencia</th>
+                    <th>Uso de numeración</th>
+                    <th>Sucursal</th>
+                    <th class="text-center" style="width:120px">Estado</th>
+                    <th class="text-center" style="width:120px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-s>
+                <tr [class.row-inactive]="!s.isActive">
+                    <td>
+                        <span class="stamp-number mono">{{ s.stampNumber }}</span>
+                    </td>
+                    <td>
+                        <span class="mono">{{ s.establishmentCode }}-{{ s.dispatchPointCode }}</span>
+                    </td>
+                    <td>
+                        <span class="doctype-chip">{{ getDocTypeLabel(s.documentType) }}</span>
+                    </td>
+                    <td>
+                        <div class="validity">
+                            <span class="mono">{{ s.validFrom }}</span>
+                            <span class="validity-sep">→</span>
+                            <span class="mono" [class.expired-date]="isExpired(s)"
+                                [class.warn-date]="isNearExpiry(s)">{{ s.validTo }}</span>
+                        </div>
+                    </td>
+                    <td style="min-width: 180px">
+                        <div class="usage-wrap">
+                            <span class="usage-nums mono">
+                                {{ s.currentNumber }} / {{ s.endNumber }}
+                            </span>
+                            <p-progressBar [value]="getUsagePercent(s)" [showValue]="false" styleClass="usage-bar"
+                                [style]="{ height: '6px' }" />
+                        </div>
+                    </td>
+                    <td>{{ s.branchName }}</td>
+                    <td class="text-center">
+                        <p-tag [value]="getStatusLabel(s)" [severity]="getStatusSeverity(s)" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-eye" severity="secondary" [text]="true" pTooltip="Ver detalle"
+                                (click)="openDetail(s)"></button>
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(s)"></button>
+                            <button pButton [icon]="s.isActive ? 'pi pi-ban' : 'pi pi-check'"
+                                [severity]="s.isActive ? 'danger' : 'success'" [text]="true"
+                                [pTooltip]="s.isActive ? 'Desactivar' : 'Activar'" (click)="confirmToggle(s)"></button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-verified"></i>
+                            <p>No hay timbrados registrados</p>
+                            <p-button icon="pi pi-plus" label="Agregar timbrado" size="small"
+                                (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Formulario ─────────────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Timbrado' : 'Nuevo Timbrado'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '600px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="stampForm" class="form-body">
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Nro. Timbrado <span class="req">*</span></label>
+                <input pInputText formControlName="stampNumber" placeholder="Ej: 12345678" class="w-full mono" />
+                @if (isInvalid('stampNumber')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Tipo de documento <span class="req">*</span></label>
+                <p-select formControlName="documentType" [options]="docTypes" optionLabel="label" optionValue="value"
+                    styleClass="w-full" appendTo="body" />
+                @if (isInvalid('documentType')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Cód. Establecimiento <span class="req">*</span></label>
+                <input pInputText formControlName="establishmentCode" placeholder="001" class="w-full mono"
+                    maxlength="3" />
+                @if (isInvalid('establishmentCode')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Punto de expedición <span class="req">*</span></label>
+                <input pInputText formControlName="dispatchPointCode" placeholder="001" class="w-full mono"
+                    maxlength="3" />
+                @if (isInvalid('dispatchPointCode')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Nro. inicial <span class="req">*</span></label>
+                <p-inputNumber formControlName="startNumber" [min]="1" styleClass="w-full" />
+                @if (isInvalid('startNumber')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Nro. final <span class="req">*</span></label>
+                <p-inputNumber formControlName="endNumber" [min]="1" styleClass="w-full" />
+                @if (isInvalid('endNumber')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Válido desde <span class="req">*</span></label>
+                <p-datepicker formControlName="validFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full"
+                    appendTo="body" />
+                @if (isInvalid('validFrom')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Válido hasta <span class="req">*</span></label>
+                <p-datepicker formControlName="validTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full"
+                    appendTo="body" />
+                @if (isInvalid('validTo')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Registrar timbrado'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Detalle ────────────────────────────────────────────────────────── -->
+<p-dialog header="Detalle del Timbrado" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    [style]="{ width: '480px' }">
+    @if (selected(); as s) {
+    <div class="detail-content">
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="di-label">Nro. Timbrado</span>
+                <span class="di-value mono">{{ s.stampNumber }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Tipo documento</span>
+                <span class="di-value">{{ getDocTypeLabel(s.documentType) }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Establecimiento</span>
+                <span class="di-value mono">{{ s.establishmentCode }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Punto expedición</span>
+                <span class="di-value mono">{{ s.dispatchPointCode }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Rango numeración</span>
+                <span class="di-value mono">{{ s.startNumber }} → {{ s.endNumber }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Número actual</span>
+                <span class="di-value mono">{{ s.currentNumber }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Vigencia</span>
+                <span class="di-value mono">{{ s.validFrom }} → {{ s.validTo }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="di-label">Sucursal</span>
+                <span class="di-value">{{ s.branchName }}</span>
+            </div>
+            <div class="detail-item span-2">
+                <span class="di-label">Uso de numeración</span>
+                <p-progressBar [value]="getUsagePercent(s)" styleClass="detail-progress" [style]="{ height: '8px' }" />
+                <span class="di-sub">{{ getUsagePercent(s) }}% utilizado</span>
+            </div>
+        </div>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="showDetail = false" />
+        @if (selected()?.isActive) {
+        <p-button label="Editar" icon="pi pi-pencil" severity="warn"
+            (onClick)="openEdit(selected()!); showDetail = false" />
+        }
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

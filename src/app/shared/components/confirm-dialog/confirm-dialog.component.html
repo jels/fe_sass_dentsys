@@ -1,0 +1,14 @@
+<p-dialog [(visible)]="visible" [header]="title" [modal]="true" [closable]="!loading" [style]="{ width: '28rem' }"
+    (onHide)="onCancel()">
+    <div class="confirm-dialog__body">
+        <i class="pi pi-exclamation-triangle confirm-dialog__icon"
+            [class.confirm-dialog__icon--danger]="severity === 'danger'"></i>
+        <p class="confirm-dialog__message">{{ message }}</p>
+    </div>
+
+    <ng-template pTemplate="footer">
+        <p-button [label]="cancelLabel" severity="secondary" [text]="true" [disabled]="loading"
+            (onClick)="onCancel()" />
+        <p-button [label]="confirmLabel" [severity]="severity" [loading]="loading" (onClick)="onConfirm()" />
+    </ng-template>
+</p-dialog>

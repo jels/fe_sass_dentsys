@@ -1,4 +1,4 @@
-import { Component, Renderer2, ViewChild } from '@angular/core';
+import { Component, Renderer2, ViewChild, OnDestroy } from '@angular/core';
 import { NavigationEnd, Router, RouterModule } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
@@ -9,19 +9,16 @@ import { LayoutService } from '../../core/services/conf/layout.service';
 
 @Component({
     selector: 'app-layout',
+    standalone: true,
     imports: [CommonModule, TopbarComponent, SidebarComponent, RouterModule, FooterComponent],
     templateUrl: './layout.component.html',
     styleUrl: './layout.component.scss'
 })
-export class LayoutComponent {
-    user: boolean = true;
-
+export class LayoutComponent implements OnDestroy {
     overlayMenuOpenSubscription: Subscription;
-
     menuOutsideClickListener: any;
 
     @ViewChild(SidebarComponent) appSidebar!: SidebarComponent;
-
     @ViewChild(TopbarComponent) appTopBar!: TopbarComponent;
 
     constructor(
@@ -43,12 +40,10 @@ export class LayoutComponent {
             }
         });
 
-        this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => {
-            this.hideMenu();
-        });
+        this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe(() => this.hideMenu());
     }
 
-    isOutsideClicked(event: MouseEvent) {
+    isOutsideClicked(event: MouseEvent): boolean {
         const sidebarEl = document.querySelector('.layout-sidebar');
         const topbarEl = document.querySelector('.layout-menu-button');
         const eventTarget = event.target as Node;
@@ -56,7 +51,7 @@ export class LayoutComponent {
         return !(sidebarEl?.isSameNode(eventTarget) || sidebarEl?.contains(eventTarget) || topbarEl?.isSameNode(eventTarget) || topbarEl?.contains(eventTarget));
     }
 
-    hideMenu() {
+    hideMenu(): void {
         this.layoutService.layoutState.update((prev) => ({
             ...prev,
             overlayMenuActive: false,
@@ -71,19 +66,11 @@ export class LayoutComponent {
     }
 
     blockBodyScroll(): void {
-        if (document.body.classList) {
-            document.body.classList.add('blocked-scroll');
-        } else {
-            document.body.className += ' blocked-scroll';
-        }
+        document.body.classList.add('blocked-scroll');
     }
 
     unblockBodyScroll(): void {
-        if (document.body.classList) {
-            document.body.classList.remove('blocked-scroll');
-        } else {
-            document.body.className = document.body.className.replace(new RegExp('(^|\\b)' + 'blocked-scroll'.split(' ').join('|') + '(\\b|$)', 'gi'), ' ');
-        }
+        document.body.classList.remove('blocked-scroll');
     }
 
     get containerClass() {
@@ -96,13 +83,8 @@ export class LayoutComponent {
         };
     }
 
-    ngOnDestroy() {
-        if (this.overlayMenuOpenSubscription) {
-            this.overlayMenuOpenSubscription.unsubscribe();
-        }
-
-        if (this.menuOutsideClickListener) {
-            this.menuOutsideClickListener();
-        }
+    ngOnDestroy(): void {
+        this.overlayMenuOpenSubscription?.unsubscribe();
+        this.menuOutsideClickListener?.();
     }
 }

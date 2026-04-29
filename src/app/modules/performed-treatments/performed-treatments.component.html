@@ -1,0 +1,268 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-heart"></i> Evolución Clínica</h1>
+            <p class="page-subtitle">Registro de tratamientos realizados por paciente</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Registrar tratamiento" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+    <div class="filter-bar filter-bar--wrap">
+        <div class="date-range">
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="Desde"
+                styleClass="date-input" (onSelect)="load()" />
+            <span class="date-sep">→</span>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" [showIcon]="true" placeholder="Hasta"
+                styleClass="date-input" (onSelect)="load()" />
+        </div>
+        <p-select [options]="patientFilterOptions" [(ngModel)]="filterPatient" optionLabel="label" optionValue="value"
+            placeholder="Paciente" [filter]="true" styleClass="filter-sel" (onChange)="load()" />
+        <p-select [options]="doctorFilterOptions" [(ngModel)]="filterDoctor" optionLabel="label" optionValue="value"
+            placeholder="Dentista" styleClass="filter-sel" (onChange)="load()" />
+        <p-select [options]="statusFilterOptions" [(ngModel)]="filterStatus" optionLabel="label" optionValue="value"
+            styleClass="filter-sel" (onChange)="load()" />
+        <button pButton icon="pi pi-times" severity="secondary" [text]="true" pTooltip="Limpiar filtros"
+            (click)="clearFilters()"></button>
+        <span class="filter-count">
+            Total: <strong>{{ totalCharged | guaranies }}</strong>
+        </span>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="3.5rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="records()" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+            [paginator]="records().length > 15" [rows]="15">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:110px">Fecha</th>
+                    <th>Paciente</th>
+                    <th>Tratamiento</th>
+                    <th>Dentista</th>
+                    <th style="width:100px">Ref. dental</th>
+                    <th class="text-right" style="width:140px">Costo real</th>
+                    <th class="text-right" style="width:140px">Cobrado</th>
+                    <th class="text-center" style="width:110px">Estado</th>
+                    <th class="text-center" style="width:120px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-r>
+                <tr [class.row-cancelled]="r.status === 'CANCELLED'">
+                    <td class="mono">{{ r.performedDate | fechaLocal }}</td>
+                    <td>
+                        <span class="person-name">{{ r.patientFullName }}</span>
+                    </td>
+                    <td>
+                        <span class="treatment-name">{{ r.treatmentName }}</span>
+                        <span class="treatment-cat">{{ r.treatmentCategory }}</span>
+                    </td>
+                    <td>
+                        <span class="doctor-name"><i class="pi pi-user"></i> {{ r.doctorFullName }}</span>
+                    </td>
+                    <td class="mono">{{ r.toothReference ?? '—' }}</td>
+                    <td class="text-right mono">{{ r.actualCost | guaranies }}</td>
+                    <td class="text-right">
+                        <span class="charged-price" [class.price-adjusted]="hasPriceAdjustment(r)">
+                            {{ r.chargedPrice | guaranies }}
+                        </span>
+                        @if (hasPriceAdjustment(r) && r.priceAdjustmentReason) {
+                        <i class="pi pi-info-circle adj-icon" [pTooltip]="r.priceAdjustmentReason"></i>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <p-tag [value]="getStatusInfo(r.status).label" [severity]="getStatusInfo(r.status).severity" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-eye" severity="secondary" [text]="true" pTooltip="Ver detalle"
+                                (click)="openDetail(r)"></button>
+                            @if (r.status === 'PERFORMED') {
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(r)"></button>
+                            <button pButton icon="pi pi-ban" severity="danger" [text]="true" pTooltip="Cancelar"
+                                (click)="confirmCancel(r)"></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="9">
+                        <div class="empty-state">
+                            <i class="pi pi-heart"></i>
+                            <p>No hay tratamientos registrados para este período</p>
+                            <p-button icon="pi pi-plus" label="Registrar tratamiento" size="small"
+                                (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Registrar / Editar ──────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Registro' : 'Registrar Tratamiento Realizado'" [(visible)]="showForm"
+    [modal]="true" [draggable]="false" [style]="{ width: '600px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="ptForm" class="form-body">
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Paciente <span class="req">*</span></label>
+                <p-select formControlName="idPatient" [options]="patientOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar paciente" [filter]="true" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('idPatient')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Dentista <span class="req">*</span></label>
+                <p-select formControlName="idDoctor" [options]="doctorOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar dentista" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('idDoctor')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Tratamiento <span class="req">*</span></label>
+                <p-select formControlName="idTreatmentCatalog" [options]="treatmentOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar tratamiento" [filter]="true" styleClass="w-full"
+                    appendTo="body" (onChange)="onTreatmentSelect($event.value)" />
+                @if (isInvalid('idTreatmentCatalog')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Fecha de realización <span class="req">*</span></label>
+                <p-datepicker formControlName="performedDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                    styleClass="w-full" appendTo="body" [maxDate]="today" />
+                @if (isInvalid('performedDate')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Referencia dental</label>
+            <input pInputText formControlName="toothReference" placeholder="Ej: 11, 21, cuadrante superior"
+                class="w-full" />
+        </div>
+
+        <p class="form-section-title">Precios</p>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Costo real (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="actualCost" mode="decimal" [minFractionDigits]="0" [min]="0"
+                    styleClass="w-full" />
+                @if (isInvalid('actualCost')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Precio cobrado (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="chargedPrice" mode="decimal" [minFractionDigits]="0" [min]="0"
+                    styleClass="w-full" />
+                @if (isInvalid('chargedPrice')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Motivo de ajuste de precio</label>
+            <input pInputText formControlName="priceAdjustmentReason"
+                placeholder="Ej: Complicación, descuento especial..." class="w-full" />
+        </div>
+
+        <div class="field">
+            <label>Observaciones clínicas</label>
+            <textarea pTextarea formControlName="observations" rows="3"
+                placeholder="Evolución, materiales utilizados, notas post-operatorias..."
+                class="w-full resize-none"></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Registrar'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Detalle ─────────────────────────────────────────────────────────── -->
+<p-dialog header="Detalle del Tratamiento" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    [style]="{ width: '480px' }">
+    @if (selected(); as r) {
+    <div class="detail-grid">
+        <div class="detail-item">
+            <span class="di-label">Paciente</span>
+            <span class="di-value">{{ r.patientFullName }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Dentista</span>
+            <span class="di-value">{{ r.doctorFullName }}</span>
+        </div>
+        <div class="detail-item span-2">
+            <span class="di-label">Tratamiento</span>
+            <span class="di-value">{{ r.treatmentName }} <em class="di-cat">· {{ r.treatmentCategory }}</em></span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Fecha</span>
+            <span class="di-value mono">{{ r.performedDate | fechaLocal }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Referencia dental</span>
+            <span class="di-value mono">{{ r.toothReference ?? '—' }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Costo real</span>
+            <span class="di-value mono">{{ r.actualCost | guaranies }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Precio cobrado</span>
+            <span class="di-value mono" [class.price-adjusted]="hasPriceAdjustment(r)">{{ r.chargedPrice | guaranies
+                }}</span>
+        </div>
+        @if (r.priceAdjustmentReason) {
+        <div class="detail-item span-2">
+            <span class="di-label">Motivo ajuste</span>
+            <span class="di-value">{{ r.priceAdjustmentReason }}</span>
+        </div>
+        }
+        @if (r.observations) {
+        <div class="detail-item span-2">
+            <span class="di-label">Observaciones</span>
+            <span class="di-value">{{ r.observations }}</span>
+        </div>
+        }
+        <div class="detail-item">
+            <span class="di-label">Estado</span>
+            <p-tag [value]="getStatusInfo(r.status).label" [severity]="getStatusInfo(r.status).severity" />
+        </div>
+        @if (r.idAppointment) {
+        <div class="detail-item">
+            <span class="di-label">Cita vinculada</span>
+            <span class="di-value mono">#{{ r.idAppointment }}</span>
+        </div>
+        }
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="showDetail = false" />
+        @if (selected()?.status === 'PERFORMED') {
+        <p-button label="Editar" icon="pi pi-pencil" severity="warn"
+            (onClick)="openEdit(selected()!); showDetail = false" />
+        }
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

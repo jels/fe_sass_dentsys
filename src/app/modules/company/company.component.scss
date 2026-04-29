@@ -1,0 +1,27 @@
+@use '../../shared/styles/module' as m;
+
+.company-cell {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.company-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 0.5rem;
+    background: var(--p-primary-100);
+    color: var(--p-primary-700);
+    font-size: 1rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.company-name {
+    font-weight: 600;
+    font-size: 0.9rem;
+}

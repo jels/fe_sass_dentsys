@@ -1,22 +1,21 @@
-import { Component, computed, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { ButtonModule } from 'primeng/button';
-import { ConfiguratorComponent } from '../configurator/configurator.component';
 import { StyleClassModule } from 'primeng/styleclass';
 import { LayoutService } from '../../core/services/conf/layout.service';
 
 @Component({
     selector: 'app-floatingconfigurator',
-    imports: [ButtonModule, StyleClassModule, ConfiguratorComponent],
+    standalone: true,
+    imports: [CommonModule, ButtonModule, StyleClassModule],
     templateUrl: './floatingconfigurator.component.html',
     styleUrl: './floatingconfigurator.component.scss'
 })
 export class FloatingconfiguratorComponent {
-    LayoutService = inject(LayoutService);
+    layoutService = inject(LayoutService);
 
-    isDarkTheme = computed(() => this.LayoutService.layoutConfig().darkTheme);
-
-    toggleDarkMode() {
-        this.LayoutService.layoutConfig.update((state) => ({
+    toggleDarkMode(): void {
+        this.layoutService.layoutConfig.update((state) => ({
             ...state,
             darkTheme: !state.darkTheme
         }));

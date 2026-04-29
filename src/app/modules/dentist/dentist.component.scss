@@ -1,0 +1,34 @@
+@use '../../shared/styles/module' as m;
+
+.dentist-name {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.dentist-avatar {
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    background: var(--p-primary-100);
+    color: var(--p-primary-700);
+    font-size: 0.75rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.name-primary {
+    display: block;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.name-sub {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--p-surface-400);
+}

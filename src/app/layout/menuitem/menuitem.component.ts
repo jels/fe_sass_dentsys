@@ -1,139 +1,75 @@
-import { animate, state, style, transition, trigger } from '@angular/animations';
+import { Component, Input, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Component, HostBinding, Input } from '@angular/core';
-import { NavigationEnd, Router, RouterModule } from '@angular/router';
-import { MenuItem } from 'primeng/api';
+import { RouterModule, Router, NavigationEnd } from '@angular/router';
+import { animate, state, style, transition, trigger } from '@angular/animations';
+import { filter, Subscription } from 'rxjs';
 import { RippleModule } from 'primeng/ripple';
-import { Subscription } from 'rxjs';
-import { filter } from 'rxjs/operators';
+import { TooltipModule } from 'primeng/tooltip';
 import { LayoutService } from '../../core/services/conf/layout.service';
 
 @Component({
     selector: '[app-menuitem]',
-    imports: [CommonModule, RouterModule, RippleModule],
+    standalone: true,
+    imports: [CommonModule, RouterModule, RippleModule, TooltipModule],
     templateUrl: './menuitem.component.html',
     styleUrl: './menuitem.component.scss',
-
-    animations: [
-        trigger('children', [
-            state(
-                'collapsed',
-                style({
-                    height: '0'
-                })
-            ),
-            state(
-                'expanded',
-                style({
-                    height: '*'
-                })
-            ),
-            transition('collapsed <=> expanded', animate('400ms cubic-bezier(0.86, 0, 0.07, 1)'))
-        ])
-    ],
-    providers: [LayoutService]
+    animations: [trigger('children', [state('collapsed', style({ height: '0' })), state('expanded', style({ height: '*' })), transition('collapsed <=> expanded', animate('400ms cubic-bezier(0.86, 0, 0.07, 1)'))])]
 })
-export class MenuitemComponent {
-    @Input() item!: MenuItem;
-
+export class MenuitemComponent implements OnInit {
+    @Input() item: any;
     @Input() index!: number;
-
-    @Input() @HostBinding('class.layout-root-menuitem') root!: boolean;
-
+    @Input() root!: boolean;
     @Input() parentKey!: string;
 
     active = false;
+    key = '';
 
-    menuSourceSubscription: Subscription;
+    layoutService = inject(LayoutService);
+    private router = inject(Router);
+    private routerSubscription!: Subscription;
 
-    menuResetSubscription: Subscription;
+    ngOnInit(): void {
+        this.key = this.parentKey ? `${this.parentKey}-${this.index}` : `${this.index}`;
 
-    key: string = '';
-
-    constructor(
-        public router: Router,
-        private layoutService: LayoutService
-    ) {
-        this.menuSourceSubscription = this.layoutService.menuSource$.subscribe((value) => {
-            Promise.resolve(null).then(() => {
-                if (value.routeEvent) {
-                    this.active = value.key === this.key || value.key.startsWith(this.key + '-') ? true : false;
-                } else {
-                    if (value.key !== this.key && !value.key.startsWith(this.key + '-')) {
-                        this.active = false;
-                    }
-                }
-            });
-        });
-
-        this.menuResetSubscription = this.layoutService.resetSource$.subscribe(() => {
-            this.active = false;
-        });
-
-        this.router.events.pipe(filter((event) => event instanceof NavigationEnd)).subscribe((params) => {
+        this.routerSubscription = this.router.events.pipe(filter((e) => e instanceof NavigationEnd)).subscribe(() => {
             if (this.item.routerLink) {
-                this.updateActiveStateFromRoute();
+                this.updateActiveState();
             }
         });
+
+        this.updateActiveState();
     }
 
-    ngOnInit() {
-        this.key = this.parentKey ? this.parentKey + '-' + this.index : String(this.index);
-
+    updateActiveState(): void {
         if (this.item.routerLink) {
-            this.updateActiveStateFromRoute();
+            this.active = this.router.isActive(this.item.routerLink[0], {
+                paths: 'subset',
+                queryParams: 'ignored',
+                fragment: 'ignored',
+                matrixParams: 'ignored'
+            });
         }
     }
 
-    updateActiveStateFromRoute() {
-        let activeRoute = this.router.isActive(this.item.routerLink[0], {
-            paths: 'exact',
-            queryParams: 'ignored',
-            matrixParams: 'ignored',
-            fragment: 'ignored'
-        });
-
-        if (activeRoute) {
-            this.layoutService.onMenuStateChange({ key: this.key, routeEvent: true });
-        }
-    }
-
-    itemClick(event: Event) {
-        // avoid processing disabled items
+    itemClick(event: Event): void {
         if (this.item.disabled) {
             event.preventDefault();
             return;
         }
 
-        // execute command
-        if (this.item.command) {
-            this.item.command({ originalEvent: event, item: this.item });
-        }
-
-        // toggle active state
         if (this.item.items) {
             this.active = !this.active;
         }
 
-        this.layoutService.onMenuStateChange({ key: this.key });
-    }
-
-    get submenuAnimation() {
-        return this.root ? 'expanded' : this.active ? 'expanded' : 'collapsed';
-    }
-
-    @HostBinding('class.active-menuitem')
-    get activeClass() {
-        return this.active && !this.root;
-    }
-
-    ngOnDestroy() {
-        if (this.menuSourceSubscription) {
-            this.menuSourceSubscription.unsubscribe();
+        if (!this.item.items && this.layoutService.isMobile()) {
+            this.layoutService.layoutState.update((prev) => ({
+                ...prev,
+                staticMenuMobileActive: false
+            }));
         }
+    }
 
-        if (this.menuResetSubscription) {
-            this.menuResetSubscription.unsubscribe();
-        }
+    ngOnDestroy(): void {
+        this.routerSubscription?.unsubscribe();
     }
 }

@@ -1,0 +1,154 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-user-plus"></i> Dentistas</h1>
+            <p class="page-subtitle">Gestión de profesionales habilitados</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nuevo dentista" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Barra de búsqueda ────────────────────────────────────────────────── -->
+    <div class="filter-bar">
+        <p-iconfield>
+            <p-inputicon class="pi pi-search" />
+            <input pInputText [(ngModel)]="search" placeholder="Buscar por nombre, CI o especialidad..."
+                class="filter-search" />
+        </p-iconfield>
+        <span class="filter-count">{{ filtered.length }} resultado{{ filtered.length !== 1 ? 's' : '' }}</span>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="3rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="filtered" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Nombre completo</th>
+                    <th>Documento</th>
+                    <th>Especialidad</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Sucursal</th>
+                    <th class="text-center" style="width:100px">Estado</th>
+                    <th class="text-center" style="width:120px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-d>
+                <tr [class.row-inactive]="!d.isActive">
+                    <td>
+                        <div class="dentist-name">
+                            <div class="dentist-avatar">{{ d.firstName[0] }}{{ d.lastName[0] }}</div>
+                            <div>
+                                <span class="name-primary">{{ d.fullName }}</span>
+                                @if (d.registrationNumber) {
+                                <span class="name-sub">Matrícula: {{ d.registrationNumber }}</span>
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <td class="mono">{{ d.documentNumber }}</td>
+                    <td>{{ d.specialty ?? '—' }}</td>
+                    <td>{{ d.phone ?? '—' }}</td>
+                    <td>{{ d.email ?? '—' }}</td>
+                    <td>{{ d.branchName }}</td>
+                    <td class="text-center">
+                        <p-tag [value]="d.isActive ? 'Activo' : 'Inactivo'"
+                            [severity]="d.isActive ? 'success' : 'secondary'" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(d)"></button>
+                            <button pButton [icon]="d.isActive ? 'pi pi-ban' : 'pi pi-check'"
+                                [severity]="d.isActive ? 'danger' : 'success'" [text]="true"
+                                [pTooltip]="d.isActive ? 'Desactivar' : 'Activar'" (click)="confirmToggle(d)"></button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-user-plus"></i>
+                            <p>No hay dentistas registrados</p>
+                            <p-button icon="pi pi-plus" label="Agregar dentista" size="small"
+                                (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Formulario ─────────────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Dentista' : 'Nuevo Dentista'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '560px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="dentistForm" class="form-body">
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Nombre <span class="req">*</span></label>
+                <input pInputText formControlName="firstName" placeholder="Nombre" class="w-full" />
+                @if (isInvalid('firstName')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Apellido <span class="req">*</span></label>
+                <input pInputText formControlName="lastName" placeholder="Apellido" class="w-full" />
+                @if (isInvalid('lastName')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Cédula / CI <span class="req">*</span></label>
+                <input pInputText formControlName="documentNumber" placeholder="Ej: 1234567" class="w-full" />
+                @if (isInvalid('documentNumber')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Nro. Matrícula</label>
+                <input pInputText formControlName="registrationNumber" placeholder="Opcional" class="w-full" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Especialidad</label>
+            <input pInputText formControlName="specialty" placeholder="Ej: Ortodoncia, Endodoncia..." class="w-full" />
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Teléfono</label>
+                <input pInputText formControlName="phone" placeholder="Ej: 0981 000 000" class="w-full" />
+            </div>
+            <div class="field">
+                <label>Email</label>
+                <input pInputText formControlName="email" placeholder="correo@ejemplo.com" class="w-full"
+                    type="email" />
+                @if (isInvalid('email')) { <small class="error-msg">Email inválido</small> }
+            </div>
+        </div>
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Registrar'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

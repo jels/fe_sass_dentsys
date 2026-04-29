@@ -1,0 +1,90 @@
+.layout-container {
+    min-height: 100vh;
+
+    // ── Static (default) ──────────────────────────────────────────────────────
+    &.layout-static {
+        .layout-main {
+            margin-left: 16rem;
+            transition: margin-left 0.3s;
+        }
+
+        &.layout-static-inactive {
+            .layout-main {
+                margin-left: 0;
+            }
+
+            app-sidebar {
+                transform: translateX(-16rem);
+            }
+        }
+    }
+
+    // ── Overlay ───────────────────────────────────────────────────────────────
+    &.layout-overlay {
+        .layout-main {
+            margin-left: 0;
+        }
+
+        app-sidebar {
+            transform: translateX(-16rem);
+        }
+
+        &.layout-overlay-active {
+            app-sidebar {
+                transform: translateX(0);
+            }
+        }
+    }
+
+    // ── Mobile ────────────────────────────────────────────────────────────────
+    &.layout-mobile-active {
+        .layout-mask {
+            display: block;
+        }
+
+        app-sidebar {
+            transform: translateX(0);
+        }
+    }
+
+    @media (max-width: 991px) {
+        app-sidebar {
+            transform: translateX(-16rem);
+        }
+
+        .layout-main {
+            margin-left: 0 !important;
+        }
+    }
+}
+
+.layout-main {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    padding-top: 4rem;
+    transition: margin-left 0.3s;
+}
+
+.layout-content {
+    flex: 1;
+    padding: 1.5rem;
+}
+
+.layout-mask {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.4);
+    z-index: 997;
+    animation: fadein 0.15s;
+}
+
+@keyframes fadein {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}

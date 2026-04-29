@@ -1,0 +1,229 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-calendar"></i> Agenda</h1>
+            <p class="page-subtitle">Gestión de citas y turnos del día</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nueva cita" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Stats rápidos ────────────────────────────────────────────────────── -->
+    <div class="stats-row">
+        <div class="stat-pill stat-pill--warn">
+            <i class="pi pi-clock"></i>
+            <span>{{ stats.pending }} pendiente{{ stats.pending !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="stat-pill stat-pill--info">
+            <i class="pi pi-check-circle"></i>
+            <span>{{ stats.confirmed }} confirmada{{ stats.confirmed !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="stat-pill stat-pill--success">
+            <i class="pi pi-heart"></i>
+            <span>{{ stats.attended }} atendida{{ stats.attended !== 1 ? 's' : '' }}</span>
+        </div>
+        <div class="stat-pill stat-pill--secondary">
+            <i class="pi pi-ban"></i>
+            <span>{{ stats.cancelled }} cancelada{{ stats.cancelled !== 1 ? 's' : '' }}</span>
+        </div>
+    </div>
+
+    <!-- ── Barra de navegación y filtros ────────────────────────────────────── -->
+    <div class="filter-bar">
+        <div class="date-nav">
+            <button pButton icon="pi pi-chevron-left" severity="secondary" [text]="true" pTooltip="Día anterior"
+                (click)="prevDay()"></button>
+            <p-datepicker [(ngModel)]="filterDate" dateFormat="dd/mm/yy" [showIcon]="true" (onSelect)="load()"
+                styleClass="date-picker-input" />
+            <button pButton icon="pi pi-chevron-right" severity="secondary" [text]="true" pTooltip="Día siguiente"
+                (click)="nextDay()"></button>
+            @if (!isToday) {
+            <button pButton label="Hoy" severity="secondary" [outlined]="true" size="small"
+                (click)="goToday()"></button>
+            }
+        </div>
+
+        <p-divider layout="vertical" />
+
+        <p-select [options]="doctorFilterOptions" [(ngModel)]="filterDoctor" optionLabel="label" optionValue="value"
+            placeholder="Dentista" styleClass="filter-sel" (onChange)="load()" />
+
+        <p-select [options]="statusFilterOptions" [(ngModel)]="filterStatus" optionLabel="label" optionValue="value"
+            styleClass="filter-sel" (onChange)="load()" />
+    </div>
+
+    <!-- ── Lista de citas ────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4]; track i) { <p-skeleton height="4rem" /> }
+        </div>
+        } @else if (appointments().length === 0) {
+        <div class="empty-state">
+            <i class="pi pi-calendar"></i>
+            <p>No hay citas para este día</p>
+            <p-button icon="pi pi-plus" label="Agendar cita" size="small" (onClick)="openCreate()" />
+        </div>
+        } @else {
+        <p-table [value]="appointments()" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:110px">Hora</th>
+                    <th>Paciente</th>
+                    <th>Dentista</th>
+                    <th>Motivo</th>
+                    <th class="text-center" style="width:130px">Estado</th>
+                    <th class="text-center" style="width:140px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-a>
+                <tr [class.row-cancelled]="a.status === 'CANCELLED' || a.status === 'NO_SHOW'">
+                    <!-- Hora -->
+                    <td>
+                        <div class="time-cell">
+                            <span class="time-start">{{ formatTime(a.startDatetime) }}</span>
+                            @if (a.endDatetime) {
+                            <span class="time-end">→ {{ formatTime(a.endDatetime) }}</span>
+                            }
+                        </div>
+                    </td>
+                    <!-- Paciente -->
+                    <td>
+                        <div class="person-cell">
+                            <div class="person-avatar">{{ a.patientFullName[0] }}</div>
+                            <div>
+                                <span class="name-primary">{{ a.patientFullName }}</span>
+                                @if (a.patientPhone) {
+                                <span class="name-sub">{{ a.patientPhone }}</span>
+                                }
+                            </div>
+                        </div>
+                    </td>
+                    <!-- Dentista -->
+                    <td>
+                        <span class="doctor-name">
+                            <i class="pi pi-user"></i> {{ a.doctorFullName }}
+                        </span>
+                    </td>
+                    <!-- Motivo -->
+                    <td>
+                        <span class="reason-text">{{ a.reason ?? '—' }}</span>
+                        @if (a.notes) {
+                        <span class="notes-text" pTooltip="{{ a.notes }}">
+                            <i class="pi pi-info-circle"></i>
+                        </span>
+                        }
+                    </td>
+                    <!-- Estado -->
+                    <td class="text-center">
+                        <p-tag [value]="getStatusInfo(a.status).label" [severity]="getStatusInfo(a.status).severity" />
+                    </td>
+                    <!-- Acciones -->
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            @if (a.status !== 'CANCELLED' && a.status !== 'NO_SHOW' && a.status !== 'ATTENDED') {
+                            <button pButton icon="pi pi-sync" severity="info" [text]="true" pTooltip="Cambiar estado"
+                                (click)="openChangeStatus(a)"></button>
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(a)"></button>
+                            <button pButton icon="pi pi-ban" severity="danger" [text]="true" pTooltip="Cancelar cita"
+                                (click)="confirmCancel(a)"></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Nueva / Editar Cita ────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Cita' : 'Nueva Cita'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '560px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="apptForm" class="form-body">
+
+        <div class="field">
+            <label>Paciente <span class="req">*</span></label>
+            <p-select formControlName="idPatient" [options]="patientOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar paciente" [filter]="true" filterPlaceholder="Buscar..." styleClass="w-full"
+                appendTo="body" />
+            @if (isInvalid('idPatient')) { <small class="error-msg">Requerido</small> }
+        </div>
+
+        <div class="field">
+            <label>Dentista <span class="req">*</span></label>
+            <p-select formControlName="idDoctor" [options]="doctorOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar dentista" styleClass="w-full" appendTo="body" />
+            @if (isInvalid('idDoctor')) { <small class="error-msg">Requerido</small> }
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Inicio <span class="req">*</span></label>
+                <p-datepicker formControlName="startDatetime" [showTime]="true" [showIcon]="true" dateFormat="dd/mm/yy"
+                    hourFormat="24" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('startDatetime')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Fin</label>
+                <p-datepicker formControlName="endDatetime" [showTime]="true" [showIcon]="true" dateFormat="dd/mm/yy"
+                    hourFormat="24" styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Motivo de la cita</label>
+            <input pInputText formControlName="reason" placeholder="Ej: Control, Extracción, Limpieza..."
+                class="w-full" />
+        </div>
+
+        <div class="field">
+            <label>Notas internas</label>
+            <textarea pTextarea formControlName="notes" rows="2" placeholder="Observaciones adicionales..."
+                class="w-full resize-none"></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Agendar cita'" icon="pi pi-calendar-plus" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Cambio de Estado ────────────────────────────────────────────────── -->
+<p-dialog header="Cambiar Estado" [(visible)]="showStatus" [modal]="true" [draggable]="false"
+    [style]="{ width: '380px' }" (onHide)="showStatus.set(false)">
+
+    @if (selected(); as a) {
+    <div class="status-modal">
+        <p class="status-modal__patient">
+            <strong>{{ a.patientFullName }}</strong> — {{ formatTime(a.startDatetime) }}
+        </p>
+        <div class="status-options">
+            @for (opt of statusOptions; track opt.value) {
+            <button class="status-opt" [class.status-opt--active]="newStatus === opt.value"
+                (click)="newStatus = opt.value">
+                <p-tag [value]="opt.label" [severity]="opt.severity" />
+            </button>
+            }
+        </div>
+    </div>
+    }
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showStatus.set(false)" />
+        <p-button label="Guardar estado" icon="pi pi-check" (onClick)="submitStatusChange()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

@@ -1,0 +1,84 @@
+@use '../../shared/styles/module' as m;
+
+.plan-title {
+    display: block;
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--p-primary-600);
+    cursor: pointer;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+.plan-desc {
+    display: block;
+    font-size: 0.775rem;
+    color: var(--p-surface-400);
+    margin-top: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
+}
+
+.person-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.doctor-name {
+    font-size: 0.82rem;
+    color: var(--p-surface-500);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    i {
+        font-size: 0.75rem;
+    }
+}
+
+.progress-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+}
+
+.progress-label {
+    font-size: 0.75rem;
+    color: var(--p-surface-400);
+}
+
+.dates-cell {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.date-row {
+    font-size: 0.78rem;
+    color: var(--p-surface-500);
+    display: flex;
+    align-items: center;
+    gap: 0.3rem;
+    i {
+        font-size: 0.7rem;
+    }
+}
+
+.form-note {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    border-radius: 0.5rem;
+    background: var(--p-blue-50);
+    color: var(--p-blue-700);
+    font-size: 0.82rem;
+    margin-top: 0.25rem;
+
+    i {
+        flex-shrink: 0;
+    }
+}

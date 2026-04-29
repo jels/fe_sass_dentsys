@@ -1,0 +1,295 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-chart-bar"></i> Reportes</h1>
+            <p class="page-subtitle">Generá reportes configurables por período, tipo y agrupación</p>
+        </div>
+    </div>
+
+    <div class="reports-layout">
+
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!-- PANEL DE CONFIGURACIÓN                                             -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <div class="config-panel">
+
+            <h3 class="config-title">Configurar reporte</h3>
+
+            <!-- Tipo de reporte -->
+            <div class="config-section">
+                <label class="config-label">Tipo de reporte</label>
+                <div class="type-cards">
+                    @for (opt of typeOptions; track opt.value) {
+                    <button class="type-card" [class.type-card--active]="selectedType === opt.value"
+                        (click)="selectedType = opt.value; onTypeChange()">
+                        <i [class]="opt.icon + ' type-card__icon'"></i>
+                        <span class="type-card__label">{{ opt.label }}</span>
+                        <span class="type-card__desc">{{ opt.description }}</span>
+                    </button>
+                    }
+                </div>
+            </div>
+
+            <p-divider />
+
+            <!-- Rango de fechas -->
+            <div class="config-section">
+                <label class="config-label">Período</label>
+                <div class="date-range-row">
+                    <div class="field">
+                        <label class="field-label">Desde</label>
+                        <p-datepicker [(ngModel)]="dateFrom" dateFormat="dd/mm/yy" [showIcon]="true"
+                            styleClass="w-full" />
+                    </div>
+                    <div class="field">
+                        <label class="field-label">Hasta</label>
+                        <p-datepicker [(ngModel)]="dateTo" dateFormat="dd/mm/yy" [showIcon]="true"
+                            styleClass="w-full" />
+                    </div>
+                </div>
+
+                <!-- Atajos de período -->
+                <div class="period-shortcuts">
+                    <button class="shortcut-btn" (click)="setThisMonth()">Este mes</button>
+                    <button class="shortcut-btn" (click)="setLastMonth()">Mes anterior</button>
+                    <button class="shortcut-btn" (click)="setThisWeek()">Esta semana</button>
+                    <button class="shortcut-btn" (click)="setToday()">Hoy</button>
+                </div>
+            </div>
+
+            <p-divider />
+
+            <!-- Agrupar por -->
+            <div class="config-section">
+                <label class="config-label">Agrupar por</label>
+                <div class="groupby-options">
+                    @for (opt of groupByOptions; track opt.value) {
+                    <button class="groupby-btn" [class.groupby-btn--active]="selectedGroupBy === opt.value"
+                        (click)="selectedGroupBy = opt.value">
+                        {{ opt.label }}
+                    </button>
+                    }
+                </div>
+            </div>
+
+            <!-- Filtros opcionales -->
+            @if (showDoctorFilter || showPatientFilter || showStatusFilter) {
+            <p-divider />
+            <div class="config-section">
+                <label class="config-label">Filtros opcionales</label>
+
+                @if (showDoctorFilter) {
+                <div class="field">
+                    <label class="field-label">Dentista</label>
+                    <p-select [(ngModel)]="selectedDoctor" [options]="doctorOptions" optionLabel="label"
+                        optionValue="value" styleClass="w-full" />
+                </div>
+                }
+
+                @if (showPatientFilter) {
+                <div class="field" style="margin-top: 0.75rem">
+                    <label class="field-label">Paciente</label>
+                    <p-select [(ngModel)]="selectedPatient" [options]="patientOptions" optionLabel="label"
+                        optionValue="value" [filter]="true" styleClass="w-full" />
+                </div>
+                }
+
+                @if (showStatusFilter) {
+                <div class="field" style="margin-top: 0.75rem">
+                    <label class="field-label">Estado</label>
+                    <p-select [(ngModel)]="selectedStatus" [options]="statusOptions" optionLabel="label"
+                        optionValue="value" styleClass="w-full" />
+                </div>
+                }
+            </div>
+            }
+
+            <p-divider />
+
+            <!-- Botón generar -->
+            <p-button label="Generar reporte" icon="pi pi-play" styleClass="w-full" [loading]="loading()"
+                (onClick)="generate()" />
+
+            <!-- Exportar -->
+            @if (hasResults()) {
+            <div class="export-row">
+                <span class="export-label">Exportar:</span>
+                <button class="export-btn" (click)="export('CSV')" [disabled]="exporting()">
+                    <i class="pi pi-file-excel"></i> CSV
+                </button>
+                <button class="export-btn" (click)="export('PDF')" [disabled]="exporting()">
+                    <i class="pi pi-file-pdf"></i> PDF
+                </button>
+            </div>
+            }
+
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!-- PANEL DE RESULTADOS                                                -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <div class="results-panel">
+
+            @if (loading()) {
+            <div class="skeleton-list">
+                <p-skeleton height="100px" />
+                <p-skeleton height="260px" />
+                <p-skeleton height="300px" />
+            </div>
+            } @else if (!hasResults()) {
+            <!-- Estado inicial -->
+            <div class="results-empty">
+                <div class="results-empty__icon">
+                    <i [class]="getTypeIcon(selectedType)"></i>
+                </div>
+                <h3>Configurá y generá tu reporte</h3>
+                <p>Seleccioná el tipo, el período y los filtros que necesités. El resultado aparecerá aquí.</p>
+            </div>
+            } @else if (result(); as r) {
+
+            <!-- ── Header del resultado ────────────────────────────────── -->
+            <div class="result-header">
+                <div class="result-title-row">
+                    <i [class]="getTypeIcon(r.reportType) + ' result-icon'"></i>
+                    <div>
+                        <h3 class="result-title">{{ getTypeLabel(r.reportType) }}</h3>
+                        <p class="result-meta">
+                            {{ r.dateFrom | fechaLocal }} → {{ r.dateTo | fechaLocal }}
+                            · {{ r.totalRecords }} registro{{ r.totalRecords !== 1 ? 's' : '' }}
+                            · Generado {{ r.generatedAt | fechaLocal : true }}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── KPIs del resumen ─────────────────────────────────────── -->
+            @if (summaryStats; as s) {
+            <div class="result-kpis">
+                @if (s.totalAmount !== undefined) {
+                <div class="result-kpi">
+                    <span class="rk-label">Total</span>
+                    <span class="rk-value mono">{{ s.totalAmount | guaranies }}</span>
+                </div>
+                }
+                @if (s.totalIncome !== undefined) {
+                <div class="result-kpi result-kpi--income">
+                    <span class="rk-label">Ingresos</span>
+                    <span class="rk-value mono">{{ s.totalIncome | guaranies }}</span>
+                </div>
+                }
+                @if (s.totalExpense !== undefined) {
+                <div class="result-kpi result-kpi--expense">
+                    <span class="rk-label">Egresos</span>
+                    <span class="rk-value mono">{{ s.totalExpense | guaranies }}</span>
+                </div>
+                }
+                @if (s.totalBalance !== undefined) {
+                <div class="result-kpi" [class.result-kpi--income]="s.totalBalance >= 0"
+                    [class.result-kpi--expense]="s.totalBalance < 0">
+                    <span class="rk-label">Balance</span>
+                    <span class="rk-value mono">{{ s.totalBalance | guaranies }}</span>
+                </div>
+                }
+                @if (s.totalAppointments !== undefined) {
+                <div class="result-kpi">
+                    <span class="rk-label">Total citas</span>
+                    <span class="rk-value">{{ s.totalAppointments }}</span>
+                </div>
+                }
+                @if (s.attendanceRate !== undefined) {
+                <div class="result-kpi result-kpi--income">
+                    <span class="rk-label">% Asistencia</span>
+                    <span class="rk-value">{{ s.attendanceRate }}%</span>
+                </div>
+                }
+                @if (s.totalInvoices !== undefined) {
+                <div class="result-kpi">
+                    <span class="rk-label">Facturas</span>
+                    <span class="rk-value">{{ s.totalInvoices }}</span>
+                </div>
+                }
+                @if (s.totalPatients !== undefined) {
+                <div class="result-kpi">
+                    <span class="rk-label">Pacientes</span>
+                    <span class="rk-value">{{ s.totalPatients }}</span>
+                </div>
+                }
+                @if (s.totalTreatments !== undefined) {
+                <div class="result-kpi">
+                    <span class="rk-label">Tratamientos</span>
+                    <span class="rk-value">{{ s.totalTreatments }}</span>
+                </div>
+                }
+            </div>
+            }
+
+            <!-- ── Gráfico ──────────────────────────────────────────────── -->
+            @if (chartData) {
+            <div class="result-chart-card">
+                <div class="chart-wrap-tall">
+                    <p-chart [type]="isAmountReport() ? 'line' : 'bar'" [data]="chartData" [options]="chartOpts" />
+                </div>
+            </div>
+            }
+
+            <!-- ── Tabla de datos ───────────────────────────────────────── -->
+            <div class="table-card">
+                <p-table [value]="r.rows" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+                    [paginator]="r.rows.length > 20" [rows]="20">
+                    <ng-template pTemplate="header">
+                        <tr>
+                            <th>{{ r.groupBy === 'NONE' ? 'Registro' : 'Período / Grupo' }}</th>
+                            <th class="text-right" style="width:120px">Cantidad</th>
+                            @if (isAmountReport()) {
+                            <th class="text-right" style="width:160px">Monto</th>
+                            }
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="body" let-row>
+                        <tr>
+                            <td>
+                                <span class="row-label">{{ row.label }}</span>
+                                @if (row.subRows && row.subRows.length > 0) {
+                                <div class="sub-rows">
+                                    @for (sub of row.subRows; track sub.label) {
+                                    <span class="sub-row">{{ sub.label }}: {{ sub.count }}</span>
+                                    }
+                                </div>
+                                }
+                            </td>
+                            <td class="text-right">
+                                <span class="count-badge">{{ row.count }}</span>
+                            </td>
+                            @if (isAmountReport()) {
+                            <td class="text-right mono fw-bold">
+                                {{ (row.amount ?? 0) | guaranies }}
+                            </td>
+                            }
+                        </tr>
+                    </ng-template>
+
+                    <ng-template pTemplate="emptymessage">
+                        <tr>
+                            <td [attr.colspan]="isAmountReport() ? 3 : 2">
+                                <div class="empty-state">
+                                    <i class="pi pi-inbox"></i>
+                                    <p>Sin datos para los filtros seleccionados</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </ng-template>
+                </p-table>
+            </div>
+
+            }
+
+        </div>
+
+    </div>
+
+</div>
+
+<p-toast position="top-right" />

@@ -1,166 +1,140 @@
-import { Component, inject } from '@angular/core';
+import { Component, OnInit, inject } from '@angular/core';
+import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
-import { MenuItem } from 'primeng/api';
-import { AuthService } from '../../core/services/api/auth.service';
 import { MenuitemComponent } from '../menuitem/menuitem.component';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
     selector: 'app-menu',
-    imports: [MenuitemComponent, RouterModule],
+    standalone: true,
+    imports: [CommonModule, RouterModule, MenuitemComponent],
     templateUrl: './menu.component.html',
     styleUrl: './menu.component.scss'
 })
-export class MenuComponent {
-    model: MenuItem[] = [];
+export class MenuComponent implements OnInit {
     private authService = inject(AuthService);
+    model: any[] = [];
 
-    rolUser = this.authService.getUserRoles();
+    ngOnInit(): void {
+        // const isAdmin = this.authService.hasAnyRole(['SUPER_ADMIN', 'ADMIN']);
+        // const isAccountant = this.authService.hasAnyRole(['SUPER_ADMIN', 'ADMIN', 'ACCOUNTANT']);
+        // const isReceptionist = this.authService.hasAnyRole(['SUPER_ADMIN', 'ADMIN', 'RECEPTIONIST']);
+        const isAdmin = true;
+        const isAccountant = true;
+        const isReceptionist = true;
 
-    constructor() {}
-
-    haveRole(role: string): boolean {
-        return this.rolUser.includes(role);
-    }
-
-    ngOnInit() {
         this.model = [
             {
-                label: 'Inicio',
+                label: 'Principal',
                 items: [
                     {
                         label: 'Dashboard',
-                        icon: 'pi pi-fw pi-gauge',
-                        routerLink: ['/sys/dashboard']
+                        icon: 'pi pi-home',
+                        routerLink: ['/modules/dashboard']
                     }
                 ]
             },
+            ...(isAdmin
+                ? [
+                      {
+                          label: 'Organización',
+                          items: [
+                              {
+                                  label: 'Empresa',
+                                  icon: 'pi pi-building',
+                                  routerLink: ['/modules/company']
+                              },
+                              {
+                                  label: 'Sucursales',
+                                  icon: 'pi pi-map-marker',
+                                  routerLink: ['/modules/branch']
+                              }
+                          ]
+                      }
+                  ]
+                : []),
             {
-                label: 'E-COMMERCE',
+                label: 'Catálogos',
                 items: [
-                    {
-                        label: 'Pedidos',
-                        icon: 'pi pi-fw pi-gift',
-                        visible: this.haveRole('warehouse_operator') || this.haveRole('delivery_person') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root'),
-                        items: [
-                            {
-                                label: 'Picking de Ordenes',
-                                icon: 'pi pi-fw pi-chart-line',
-                                visible: this.haveRole('warehouse_operator') || this.haveRole('delivery_person') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/orders/orders']
-                            },
-                            {
-                                label: 'Romaneo de Ordenes',
-                                icon: 'pi pi-fw pi-database',
-                                visible: this.haveRole('warehouse_operator') || this.haveRole('delivery_person') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/orders/picking-orders']
-                            },
-                            {
-                                label: 'Ordenes',
-                                icon: 'pi pi-fw pi-database',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/orders']
-                            },
-                            {
-                                label: 'Facturas',
-                                icon: 'pi pi-fw pi-database',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/orders/invoice']
-                            }
-                        ]
-                    },
-                    {
-                        label: 'Favoritos',
-                        icon: 'pi pi-fw pi-heart',
-                        visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                        // routerLink: ['/dd/cp/favorites']
-                    },
-                    {
-                        label: 'E-Commerce',
-                        icon: 'pi pi-fw pi-cart-plus',
-                        visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                        // routerLink: ['/dd/cp/ecommerce']
-                    }
+                    ...(isAdmin
+                        ? [
+                              {
+                                  label: 'Dentistas',
+                                  icon: 'pi pi-user-plus',
+                                  routerLink: ['/modules/dentist']
+                              },
+                              {
+                                  label: 'Tratamientos',
+                                  icon: 'pi pi-list',
+                                  routerLink: ['/modules/treatment-catalog']
+                              },
+                              {
+                                  label: 'Timbrados',
+                                  icon: 'pi pi-verified',
+                                  routerLink: ['/modules/stamps']
+                              }
+                          ]
+                        : [])
                 ]
             },
             {
-                label: 'ADMINISTRACIÓN',
+                label: 'Operaciones',
                 items: [
                     {
-                        label: 'Reportes',
-                        icon: 'pi pi-fw pi-chart-bar',
-                        visible: this.haveRole('warehouse_operator') || this.haveRole('delivery_person') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root'),
-                        items: [
-                            {
-                                label: 'Entrada vs Salida',
-                                icon: 'pi pi-fw pi-chart-line',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/report/movement']
-                            },
-                            {
-                                label: 'Inventario General',
-                                icon: 'pi pi-fw pi-database',
-                                visible: this.haveRole('warehouse_operator') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/report/general']
-                            },
-                            {
-                                label: 'Inventario por Depósito',
-                                icon: 'pi pi-fw pi-database',
-                                visible: this.haveRole('warehouse_operator') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/report/inventory-branch']
-                            },
-                            {
-                                label: 'Delivery Tracking',
-                                icon: 'pi pi-fw pi-truck',
-                                visible: this.haveRole('warehouse_operator') || this.haveRole('delivery_person') || this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/report/delivery-tracking']
-                            }
-                        ]
+                        label: 'Pacientes',
+                        icon: 'pi pi-users',
+                        routerLink: ['/modules/patients']
                     },
                     {
-                        label: 'Configuración',
-                        icon: 'pi pi-fw pi-cog',
-                        visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root'),
-                        items: [
-                            {
-                                label: 'Productos',
-                                icon: 'pi pi-fw pi-tags',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/settings/products']
-                            },
-                            {
-                                label: 'Categorias',
-                                icon: 'pi pi-fw pi-list-check',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/settings/categories']
-                            },
-                            {
-                                label: 'Depósitos y Stock',
-                                icon: 'pi pi-fw pi-map-marker',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/settings/warehause-stock']
-                            },
-                            {
-                                label: 'Sucusales',
-                                icon: 'pi pi-fw pi-shop',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/settings/branch']
-                            },
-                            {
-                                label: 'Timbrados',
-                                icon: 'pi pi-fw pi-receipt',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/settings/timbrado']
-                            },
-                            {
-                                label: 'Roles y Usuarios',
-                                icon: 'pi pi-fw pi-id-card',
-                                visible: this.haveRole('manager') || this.haveRole('admin') || this.haveRole('Root')
-                                // routerLink: ['/dd/cp/settings/user-rol']
-                            }
-                        ]
+                        label: 'Agenda',
+                        icon: 'pi pi-calendar',
+                        routerLink: ['/modules/scheduling']
+                    },
+                    {
+                        label: 'Plan de tratamiento',
+                        icon: 'pi pi-clipboard',
+                        routerLink: ['/modules/treatment-plan']
+                    },
+                    {
+                        label: 'Evolución clínica',
+                        icon: 'pi pi-heart',
+                        routerLink: ['/modules/performed-treatments']
                     }
                 ]
-            }
+            },
+            ...(isAccountant || isReceptionist
+                ? [
+                      {
+                          label: 'Facturación',
+                          items: [
+                              {
+                                  label: 'Facturas',
+                                  icon: 'pi pi-file-check',
+                                  routerLink: ['/modules/invoicing']
+                              },
+                              {
+                                  label: 'Recibos',
+                                  icon: 'pi pi-receipt',
+                                  routerLink: ['/modules/receipts']
+                              },
+                              ...(isAccountant
+                                  ? [
+                                        {
+                                            label: 'Libro caja',
+                                            icon: 'pi pi-book',
+                                            routerLink: ['/modules/cash-book']
+                                        },
+                                        {
+                                            label: 'Reportes',
+                                            icon: 'pi pi-chart-bar',
+                                            routerLink: ['/modules/reports']
+                                        }
+                                    ]
+                                  : [])
+                          ]
+                      }
+                  ]
+                : [])
         ];
     }
 }

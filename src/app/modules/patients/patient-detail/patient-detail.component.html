@@ -1,0 +1,138 @@
+<div class="module-page">
+
+    @if (loading()) {
+    <div class="skeleton-list">
+        <p-skeleton height="5rem" />
+        <p-skeleton height="12rem" />
+        <p-skeleton height="8rem" />
+    </div>
+    } @else if (patient(); as p) {
+
+    <!-- ── Header de ficha ──────────────────────────────────────────────── -->
+    <div class="ficha-header">
+        <button pButton icon="pi pi-arrow-left" severity="secondary" [text]="true" pTooltip="Volver" (click)="goBack()"
+            class="back-btn"></button>
+        <div class="ficha-avatar" [class.ficha-avatar--m]="p.gender === 'M'" [class.ficha-avatar--f]="p.gender === 'F'">
+            {{ p.firstName[0] }}{{ p.lastName[0] }}
+        </div>
+        <div class="ficha-identity">
+            <h1 class="ficha-name">{{ p.fullName }}</h1>
+            <div class="ficha-meta">
+                @if (p.idNumber) { <span class="meta-chip"><i class="pi pi-id-card"></i> {{ p.idNumber }}</span> }
+                @if (p.birthDate) { <span class="meta-chip"><i class="pi pi-calendar"></i> {{ calcAge(p.birthDate)
+                    }}</span> }
+                @if (p.gender) { <span class="meta-chip"><i
+                        [class]="p.gender === 'M' ? 'pi pi-mars' : 'pi pi-venus'"></i> {{ p.gender === 'M' ? 'Masculino'
+                    : 'Femenino' }}</span> }
+                <p-tag [value]="p.active ? 'Activo' : 'Inactivo'" [severity]="p.active ? 'success' : 'secondary'" />
+            </div>
+        </div>
+        <div class="ficha-actions">
+            <p-button icon="pi pi-calendar-plus" label="Nueva cita" severity="primary" (onClick)="newAppointment()" />
+        </div>
+    </div>
+
+    <!-- ── Grid de info ──────────────────────────────────────────────────── -->
+    <div class="ficha-grid">
+
+        <!-- Datos de contacto -->
+        <div class="info-card">
+            <h3 class="info-card__title"><i class="pi pi-phone"></i> Contacto</h3>
+            <div class="info-list">
+                <div class="info-row">
+                    <span class="info-label">Teléfono</span>
+                    <span class="info-value">{{ p.phone ?? '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email</span>
+                    <span class="info-value">{{ p.email ?? '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Dirección</span>
+                    <span class="info-value">{{ p.address ?? '—' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Fecha nac.</span>
+                    <span class="info-value mono">{{ p.birthDate | fechaLocal }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Info clínica -->
+        <div class="info-card">
+            <h3 class="info-card__title"><i class="pi pi-heart"></i> Información clínica</h3>
+            <div class="info-list">
+                @if (p.allergies) {
+                <div class="info-row">
+                    <span class="info-label allergy-label">
+                        <i class="pi pi-exclamation-triangle"></i> Alergias
+                    </span>
+                    <span class="info-value allergy-value">{{ p.allergies }}</span>
+                </div>
+                } @else {
+                <div class="info-row">
+                    <span class="info-label">Alergias</span>
+                    <span class="info-value muted">Sin alergias registradas</span>
+                </div>
+                }
+                @if (p.clinicalNotes) {
+                <div class="info-row info-row--col">
+                    <span class="info-label">Notas clínicas</span>
+                    <span class="info-value clinical-notes">{{ p.clinicalNotes }}</span>
+                </div>
+                }
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ── Próximas citas ────────────────────────────────────────────────── -->
+    <div class="info-card">
+        <div class="info-card__header">
+            <h3 class="info-card__title"><i class="pi pi-calendar"></i> Próximas citas</h3>
+            <p-button icon="pi pi-plus" label="Agendar" size="small" (onClick)="newAppointment()" />
+        </div>
+
+        @if (loadingAppts()) {
+        <p-skeleton height="3rem" />
+        } @else if (upcomingAppts.length === 0) {
+        <p class="no-appts">No hay citas próximas agendadas.</p>
+        } @else {
+        <div class="appt-list">
+            @for (a of upcomingAppts; track a.idAppointment) {
+            <div class="appt-row">
+                <div class="appt-datetime">
+                    <span class="appt-date">{{ formatDatetime(a.startDatetime) }}</span>
+                </div>
+                <span class="appt-doctor"><i class="pi pi-user"></i> {{ a.doctorFullName }}</span>
+                @if (a.reason) { <span class="appt-reason">{{ a.reason }}</span> }
+                <p-tag [value]="getStatusInfo(a.status).label" [severity]="getStatusInfo(a.status).severity" />
+            </div>
+            }
+        </div>
+        }
+    </div>
+
+    <!-- ── Historial de citas ────────────────────────────────────────────── -->
+    @if (pastAppts.length > 0) {
+    <div class="info-card">
+        <h3 class="info-card__title"><i class="pi pi-history"></i> Historial de citas</h3>
+        <div class="appt-list">
+            @for (a of pastAppts; track a.idAppointment) {
+            <div class="appt-row appt-row--past">
+                <div class="appt-datetime">
+                    <span class="appt-date">{{ formatDatetime(a.startDatetime) }}</span>
+                </div>
+                <span class="appt-doctor"><i class="pi pi-user"></i> {{ a.doctorFullName }}</span>
+                @if (a.reason) { <span class="appt-reason">{{ a.reason }}</span> }
+                <p-tag [value]="getStatusInfo(a.status).label" [severity]="getStatusInfo(a.status).severity" />
+            </div>
+            }
+        </div>
+    </div>
+    }
+
+    }
+</div>
+
+<p-toast position="top-right" />

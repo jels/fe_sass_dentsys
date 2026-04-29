@@ -1,94 +1,51 @@
 <div class="layout-topbar">
-    <div class="layout-topbar-logo-container">
-        @if(user){
-        <button class="layout-menu-button layout-topbar-action" (click)="layoutService.onMenuToggle()">
-            <i class="pi pi-bars"></i>
-        </button>
-        }
-        @if( rolUser === 'CUSTOMER'){
-        <a class="layout-topbar-logo" routerLink="/dd/cl">
-            <img src="./assets/img/logos/Avancemos128.png" alt="Logo" class="h-10 w-auto" />
-            <span>DistriDent</span>
-        </a>
-        }
-        @else{
-        <a class="layout-topbar-logo" routerLink="/dd/cp">
-            <img src="./assets/img/logos/Avancemos128.png" alt="Logo" class="h-10 w-auto" />
-            <span>DistriDent</span>
-        </a>
-        }
-    </div>
 
+    <!-- Botón hamburguesa -->
+    <button class="layout-menu-button layout-topbar-action" pTooltip="Menú" tooltipPosition="bottom"
+        (click)="layoutService.onMenuToggle()">
+        <i class="pi pi-bars"></i>
+    </button>
+
+    <!-- Logo -->
+    <a class="layout-topbar-logo" routerLink="/modules/dashboard">
+        <img src="./assets/img/logos/dentsys-logo.png" alt="DENTSYS" class="layout-topbar-logo__img" />
+        <span class="layout-topbar-logo__text">DENTSYS</span>
+    </a>
+
+    <!-- Acciones -->
     <div class="layout-topbar-actions">
-        <div class="layout-config-menu">
-            <button type="button" class="layout-topbar-action" (click)="toggleDarkMode()">
-                <i
-                    [ngClass]="{ 'pi ': true, 'pi-moon': layoutService.isDarkTheme(), 'pi-sun': !layoutService.isDarkTheme() }"></i>
-            </button>
-            <!-- <div class="relative">
-                <button class="layout-topbar-action layout-topbar-action-highlight" pStyleClass="@next"
-                    enterFromClass="hidden" enterActiveClass="animate-scalein" leaveToClass="hidden"
-                    leaveActiveClass="animate-fadeout" [hideOnOutsideClick]="true">
-                    <i class="pi pi-palette"></i>
-                </button> -->
-            <app-configurator />
-            <!-- </div> -->
-        </div>
 
-        <button class="layout-topbar-menu-button layout-topbar-action" pStyleClass="@next" enterFromClass="hidden"
-            enterActiveClass="animate-scalein" leaveToClass="hidden" leaveActiveClass="animate-fadeout"
-            [hideOnOutsideClick]="true">
-            <i class="pi pi-ellipsis-v"></i>
+        <!-- Dark mode -->
+        <button class="layout-topbar-action" pTooltip="Cambiar tema" tooltipPosition="bottom"
+            (click)="toggleDarkMode()">
+            <i [class]="layoutService.isDarkTheme() ? 'pi pi-sun' : 'pi pi-moon'"></i>
         </button>
 
-        <div class="layout-topbar-menu hidden lg:block">
-            <div class="layout-topbar-menu-content">
-                @if( rolUser === 'customer' || rolUser === 'admin' ){
+        <!-- Configurator -->
+        <app-configurator />
 
-                <button type="button" class="layout-topbar-action" pTooltip="Carrito Compras" tooltipPosition="left"
-                    (click)="goto('/dd/cl/shoppingcart')">
-                    <i class="pi pi-shopping-cart"></i>
-                    <span>Carrito</span>
-                </button>
+        <!-- Notificaciones (placeholder) -->
+        <button class="layout-topbar-action" pTooltip="Notificaciones" tooltipPosition="bottom">
+            <i class="pi pi-bell"></i>
+        </button>
 
-                <button type="button" class="layout-topbar-action" pTooltip="Favoritos" tooltipPosition="left"
-                    (click)="goto('/dd/cl/favorites')">
-                    <i class="pi pi-heart"></i>
-                    <span>Favoritos</span>
-                </button>
+        <!-- Avatar / usuario -->
+        <button class="layout-topbar-action layout-topbar-action--avatar" pTooltip="Cerrar sesión"
+            tooltipPosition="bottom" (click)="openConfirmation()">
+            <p-avatar [label]="fullName() | initials" shape="circle" styleClass="layout-topbar-avatar" />
+        </button>
 
-                }
-
-                <button type="button" class="layout-topbar-action" pTooltip="Notificaciones" tooltipPosition="left"
-                    (click)="goto('/dd/cl/notifications')">
-                    <i class="pi pi-inbox"></i>
-                    <span>Notificaciones</span>
-                </button>
-
-                <button type="button" class="layout-topbar-action" pTooltip="Perfil" tooltipPosition="left"
-                    (click)="goto('/dd/cl/userdetail')">
-                    <i class="pi pi-user"></i>
-                    <span>Perfil</span>
-                </button>
-
-                <button type="button" class="layout-topbar-action" pTooltip="Salir" tooltipPosition="left"
-                    (click)="openConfirmation()">
-                    <i class="pi pi-fw pi-sign-out"></i>
-                    <span>Logout</span>
-                </button>
-            </div>
-        </div>
     </div>
 </div>
 
-<p-dialog header="Confirmación" [(visible)]="displayConfirmation" [style]="{ width: '350px' }" [modal]="true">
-    <div class="flex items-center justify-center">
-        <i class="pi pi-exclamation-triangle mr-4" style="font-size: 2rem"> </i>
-        <span>¿Esta seguro que desea cerrar la sesión?</span>
+<!-- Modal cierre de sesión -->
+<p-dialog [(visible)]="displayConfirmation" header="Cerrar sesión" [modal]="true" [style]="{ width: '26rem' }">
+    <div class="topbar-logout-body">
+        <i class="pi pi-sign-out topbar-logout-icon"></i>
+        <p>¿Estás seguro de que querés cerrar la sesión?</p>
     </div>
-    <ng-template #footer>
-        <p-button label="No" icon="pi pi-times" (click)="closeConfirmation(false)" text severity="danger" />
-        <p-button label="Si" icon="pi pi-check" (click)="closeConfirmation(true)" severity="success" outlined
-            autofocus />
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="closeConfirmation(false)" />
+        <p-button label="Cerrar sesión" severity="danger" (onClick)="closeConfirmation(true)" />
     </ng-template>
 </p-dialog>

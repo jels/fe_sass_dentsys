@@ -1,0 +1,234 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-receipt"></i> Recibos</h1>
+            <p class="page-subtitle">Registro de cobros y pagos recibidos</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nuevo recibo" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Stats ────────────────────────────────────────────────────────────── -->
+    <div class="summary-bar">
+        <span class="summary-text">
+            <strong>{{ receipts().length }}</strong> recibo{{ receipts().length !== 1 ? 's' : '' }} —
+            Total: <strong>{{ totalAmount | guaranies }}</strong>
+        </span>
+    </div>
+
+    <!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+    <div class="filter-bar filter-bar--wrap">
+        <div class="date-range">
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="date-input"
+                (onSelect)="load()" />
+            <span class="date-sep">→</span>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="date-input"
+                (onSelect)="load()" />
+        </div>
+        <p-select [options]="patientFilterOpts" [(ngModel)]="filterPatient" optionLabel="label" optionValue="value"
+            placeholder="Paciente" [filter]="true" styleClass="filter-sel" (onChange)="load()" />
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4]; track i) { <p-skeleton height="3rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="receipts()" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+            [paginator]="receipts().length > 15" [rows]="15">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:150px">Nro. Recibo</th>
+                    <th>Paciente</th>
+                    <th style="width:130px">Origen</th>
+                    <th>Factura vinculada</th>
+                    <th style="width:120px">Método</th>
+                    <th style="width:130px">Fecha</th>
+                    <th class="text-right" style="width:140px">Monto</th>
+                    <th class="text-center" style="width:80px">Ver</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-r>
+                <tr>
+                    <td>
+                        <span class="receipt-number mono" (click)="openDetail(r)">{{ r.receiptNumber }}</span>
+                    </td>
+                    <td>
+                        <span class="person-name">{{ r.patientFullName }}</span>
+                    </td>
+                    <td>
+                        <span [class]="r.origin === 'INVOICE_PAYMENT' ? 'origin-invoice' : 'origin-direct'">
+                            {{ getOriginLabel(r.origin) }}
+                        </span>
+                    </td>
+                    <td>
+                        @if (r.invoiceNumber) {
+                        <span class="mono link-number">{{ r.invoiceNumber }}</span>
+                        } @else {
+                        <span class="muted-text">—</span>
+                        }
+                    </td>
+                    <td>
+                        <span class="method-chip">
+                            <i class="pi" [ngClass]="{
+                                    'pi-wallet':                  r.paymentMethod === 'CASH',
+                                    'pi-arrow-right-arrow-left':  r.paymentMethod === 'TRANSFER',
+                                    'pi-credit-card':             r.paymentMethod === 'CARD',
+                                    'pi-file':                    r.paymentMethod === 'CHECK'
+                                }"></i>
+                            {{ getMethodLabel(r.paymentMethod) }}
+                        </span>
+                    </td>
+                    <td class="mono">{{ r.issueDatetime | fechaLocal : true }}</td>
+                    <td class="text-right mono fw-bold">{{ r.amount | guaranies }}</td>
+                    <td class="text-center">
+                        <button pButton icon="pi pi-eye" severity="secondary" [text]="true" pTooltip="Ver detalle"
+                            (click)="openDetail(r)"></button>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-receipt"></i>
+                            <p>No hay recibos para este período</p>
+                            <p-button icon="pi pi-plus" label="Generar recibo" size="small" (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Nuevo Recibo ────────────────────────────────────────────────────── -->
+<p-dialog header="Nuevo Recibo" [(visible)]="showForm" [modal]="true" [draggable]="false"
+    [style]="{ width: '520px', maxWidth: '97vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="receiptForm" class="form-body">
+
+        <div class="field">
+            <label>Tipo de recibo <span class="req">*</span></label>
+            <div class="origin-toggle">
+                <button type="button" class="origin-btn"
+                    [class.origin-btn--active]="receiptForm.get('origin')?.value === 'DIRECT_INCOME'"
+                    (click)="receiptForm.patchValue({ origin: 'DIRECT_INCOME' })">
+                    <i class="pi pi-plus-circle"></i> Ingreso directo
+                </button>
+                <button type="button" class="origin-btn"
+                    [class.origin-btn--active]="receiptForm.get('origin')?.value === 'INVOICE_PAYMENT'"
+                    (click)="receiptForm.patchValue({ origin: 'INVOICE_PAYMENT' })">
+                    <i class="pi pi-file-check"></i> Pago de factura
+                </button>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Paciente <span class="req">*</span></label>
+            <p-select formControlName="idPatient" [options]="patientOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar paciente" [filter]="true" styleClass="w-full" appendTo="body" />
+            @if (isInvalid('idPatient')) { <small class="error-msg">Requerido</small> }
+        </div>
+
+        @if (isInvoicePayment) {
+        <div class="field">
+            <label>Factura a pagar <span class="req">*</span></label>
+            <p-select formControlName="idInvoice" [options]="invoiceOptions" optionLabel="label" optionValue="value"
+                placeholder="Seleccionar factura pendiente" styleClass="w-full" appendTo="body" />
+            @if (isInvalid('idInvoice')) { <small class="error-msg">Requerido</small> }
+        </div>
+        }
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Monto (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="amount" mode="decimal" [minFractionDigits]="0" [min]="1"
+                    styleClass="w-full" />
+                @if (isInvalid('amount')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Método de pago <span class="req">*</span></label>
+                <p-select formControlName="paymentMethod" [options]="payMethodOptions" optionLabel="label"
+                    optionValue="value" styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Timbrado de recibo</label>
+            <p-select formControlName="idReceiptStamp" [options]="stampOptions" optionLabel="label" optionValue="value"
+                styleClass="w-full" appendTo="body" />
+        </div>
+
+        <div class="field">
+            <label>Concepto <span class="req">*</span></label>
+            <input pInputText formControlName="concept" class="w-full" />
+            @if (isInvalid('concept')) { <small class="error-msg">Requerido</small> }
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button label="Generar recibo" icon="pi pi-check" [loading]="saving()" (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Detalle ─────────────────────────────────────────────────────────── -->
+<p-dialog header="Detalle del Recibo" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    [style]="{ width: '440px' }">
+    @if (selected(); as r) {
+    <div class="detail-grid">
+        <div class="detail-item">
+            <span class="di-label">Nro. Recibo</span>
+            <span class="di-value mono">{{ r.receiptNumber }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Fecha</span>
+            <span class="di-value mono">{{ r.issueDatetime | fechaLocal : true }}</span>
+        </div>
+        <div class="detail-item span-2">
+            <span class="di-label">Paciente</span>
+            <span class="di-value">{{ r.patientFullName }}
+                @if (r.patientIdNumber) { <em class="muted-text mono"> · {{ r.patientIdNumber }}</em> }
+            </span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Origen</span>
+            <span class="di-value">{{ getOriginLabel(r.origin) }}</span>
+        </div>
+        <div class="detail-item">
+            <span class="di-label">Método</span>
+            <span class="di-value">{{ getMethodLabel(r.paymentMethod) }}</span>
+        </div>
+        @if (r.invoiceNumber) {
+        <div class="detail-item span-2">
+            <span class="di-label">Factura vinculada</span>
+            <span class="di-value mono">{{ r.invoiceNumber }}</span>
+        </div>
+        }
+        <div class="detail-item span-2">
+            <span class="di-label">Concepto</span>
+            <span class="di-value">{{ r.concept }}</span>
+        </div>
+        <div class="detail-item span-2">
+            <span class="di-label">Monto</span>
+            <span class="di-value mono amount-value">{{ r.amount | guaranies }}</span>
+        </div>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="showDetail = false" />
+    </ng-template>
+</p-dialog>
+
+<p-toast position="top-right" />

@@ -1,0 +1,184 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-clipboard"></i> Planes de Tratamiento</h1>
+            <p class="page-subtitle">Gestión de planes clínicos por paciente</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nuevo plan" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+    <div class="filter-bar">
+        <p-iconfield>
+            <p-inputicon class="pi pi-search" />
+            <input pInputText [(ngModel)]="search" placeholder="Buscar por título, paciente o dentista..."
+                class="filter-search" />
+        </p-iconfield>
+        <p-select [options]="statusFilterOptions" [(ngModel)]="filterStatus" optionLabel="label" optionValue="value"
+            styleClass="filter-sel" (onChange)="load()" />
+        <span class="filter-count">{{ filtered.length }} plan{{ filtered.length !== 1 ? 'es' : '' }}</span>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4]; track i) { <p-skeleton height="4rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="filtered" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+            [paginator]="filtered.length > 12" [rows]="12">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Plan</th>
+                    <th>Paciente</th>
+                    <th>Dentista</th>
+                    <th style="width:180px">Progreso</th>
+                    <th class="text-right" style="width:140px">Total estimado</th>
+                    <th>Fechas</th>
+                    <th class="text-center" style="width:110px">Estado</th>
+                    <th class="text-center" style="width:130px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-p>
+                <tr>
+                    <td>
+                        <span class="plan-title" (click)="goToDetail(p)">{{ p.title }}</span>
+                        @if (p.description) {
+                        <span class="plan-desc">{{ p.description }}</span>
+                        }
+                    </td>
+                    <td>
+                        <span class="person-name">{{ p.patientFullName }}</span>
+                    </td>
+                    <td>
+                        <span class="doctor-name"><i class="pi pi-user"></i> {{ p.doctorFullName }}</span>
+                    </td>
+                    <td>
+                        <div class="progress-cell">
+                            <p-progressBar [value]="progressPercent(p)" [showValue]="false"
+                                [style]="{ height: '6px' }" />
+                            <span class="progress-label">
+                                {{ p.completedItems }}/{{ p.totalItems }} ítems
+                            </span>
+                        </div>
+                    </td>
+                    <td class="text-right mono">{{ p.totalEstimated | guaranies }}</td>
+                    <td>
+                        <div class="dates-cell">
+                            @if (p.startDate) { <span class="date-row"><i class="pi pi-play"></i> {{ p.startDate |
+                                fechaLocal }}</span> }
+                            @if (p.estimatedEndDate) { <span class="date-row"><i class="pi pi-flag"></i> {{
+                                p.estimatedEndDate | fechaLocal }}</span> }
+                        </div>
+                    </td>
+                    <td class="text-center">
+                        <p-tag [value]="getStatusInfo(p.status).label" [severity]="getStatusInfo(p.status).severity" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-folder-open" severity="info" [text]="true"
+                                pTooltip="Ver detalle" (click)="goToDetail(p)"></button>
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(p)"></button>
+                            @if (p.status === 'DRAFT') {
+                            <button pButton icon="pi pi-play" severity="success" [text]="true" pTooltip="Activar plan"
+                                (click)="confirmChangeStatus(p, 'ACTIVE')"></button>
+                            }
+                            @if (p.status === 'ACTIVE') {
+                            <button pButton icon="pi pi-check-circle" severity="secondary" [text]="true"
+                                pTooltip="Marcar completado" (click)="confirmChangeStatus(p, 'COMPLETED')"></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-clipboard"></i>
+                            <p>No hay planes de tratamiento</p>
+                            <p-button icon="pi pi-plus" label="Crear plan" size="small" (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Formulario ─────────────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Plan' : 'Nuevo Plan de Tratamiento'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '580px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="planForm" class="form-body">
+
+        <div class="field">
+            <label>Título del plan <span class="req">*</span></label>
+            <input pInputText formControlName="title" placeholder="Ej: Plan de rehabilitación oral completa"
+                class="w-full" />
+            @if (isInvalid('title')) { <small class="error-msg">Requerido (mínimo 3 caracteres)</small> }
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Paciente <span class="req">*</span></label>
+                <p-select formControlName="idPatient" [options]="patientOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar paciente" [filter]="true" filterPlaceholder="Buscar..." styleClass="w-full"
+                    appendTo="body" />
+                @if (isInvalid('idPatient')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Dentista <span class="req">*</span></label>
+                <p-select formControlName="idDoctor" [options]="doctorOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar dentista" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('idDoctor')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Descripción</label>
+            <textarea pTextarea formControlName="description" rows="2"
+                placeholder="Observaciones o descripción general del plan..." class="w-full resize-none"></textarea>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Fecha de inicio</label>
+                <p-datepicker formControlName="startDate" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="w-full"
+                    appendTo="body" />
+            </div>
+            <div class="field">
+                <label>Fecha estimada de fin</label>
+                <p-datepicker formControlName="estimatedEndDate" dateFormat="dd/mm/yy" [showIcon]="true"
+                    styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        @if (!isEditMode()) {
+        <div class="form-note">
+            <i class="pi pi-info-circle"></i>
+            Los tratamientos del plan se agregan desde el detalle después de crearlo.
+        </div>
+        }
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Crear plan'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

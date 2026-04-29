@@ -1,0 +1,170 @@
+<div class="module-page">
+
+    @if (loading()) {
+    <div class="skeleton-list">
+        <p-skeleton height="5rem" />
+        <p-skeleton height="10rem" />
+    </div>
+    } @else if (plan(); as p) {
+
+    <!-- ── Header del plan ──────────────────────────────────────────────── -->
+    <div class="plan-header">
+        <button pButton icon="pi pi-arrow-left" severity="secondary" [text]="true" pTooltip="Volver"
+            (click)="goBack()"></button>
+        <div class="plan-identity">
+            <div class="plan-title-row">
+                <h1 class="plan-title">{{ p.title }}</h1>
+                <p-tag [value]="getPlanStatusInfo(p.status).label" [severity]="getPlanStatusInfo(p.status).severity" />
+            </div>
+            <div class="plan-meta">
+                <span class="meta-item"><i class="pi pi-user"></i> {{ p.patientFullName }}</span>
+                <span class="meta-item"><i class="pi pi-user-plus"></i> {{ p.doctorFullName }}</span>
+                @if (p.startDate) { <span class="meta-item"><i class="pi pi-play"></i> {{ p.startDate | fechaLocal
+                    }}</span> }
+                @if (p.estimatedEndDate) { <span class="meta-item"><i class="pi pi-flag"></i> {{ p.estimatedEndDate |
+                    fechaLocal }}</span> }
+            </div>
+            @if (p.description) { <p class="plan-desc">{{ p.description }}</p> }
+        </div>
+
+        <!-- Progreso global -->
+        <div class="plan-progress">
+            <div class="progress-stats">
+                <span class="progress-num">{{ completedCount }}/{{ totalCount }}</span>
+                <span class="progress-pct">{{ progressPercent }}%</span>
+            </div>
+            <p-progressBar [value]="progressPercent" [showValue]="false" [style]="{ height: '8px' }" />
+            <div class="progress-total">
+                Total: <strong>{{ totalEstimated | guaranies }}</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Ítems del plan ────────────────────────────────────────────────── -->
+    <div class="items-card">
+        <div class="items-card__header">
+            <h3 class="items-card__title">
+                <i class="pi pi-list"></i> Tratamientos del plan
+            </h3>
+            @if (canEdit(p)) {
+            <p-button icon="pi pi-plus" label="Agregar tratamiento" size="small" (onClick)="openAddItem()" />
+            }
+        </div>
+
+        @if (!p.items || p.items.length === 0) {
+        <div class="empty-state">
+            <i class="pi pi-list"></i>
+            <p>No hay tratamientos en este plan</p>
+            @if (canEdit(p)) {
+            <p-button icon="pi pi-plus" label="Agregar tratamiento" size="small" (onClick)="openAddItem()" />
+            }
+        </div>
+        } @else {
+        <div class="items-list">
+            @for (item of p.items; track item.idTreatmentPlanItem) {
+            <div class="plan-item" [class.plan-item--done]="item.status === 'COMPLETED'"
+                [class.plan-item--cancelled]="item.status === 'CANCELLED'">
+
+                <!-- Orden -->
+                <div class="item-order">{{ item.itemOrder }}</div>
+
+                <!-- Info del tratamiento -->
+                <div class="item-info">
+                    <span class="item-name">{{ item.treatmentName }}</span>
+                    <div class="item-meta">
+                        <span class="item-cat">{{ item.treatmentCategory }}</span>
+                        @if (item.toothReference) {
+                        <span class="item-tooth">
+                            <i class="pi pi-map-marker"></i> {{ item.toothReference }}
+                        </span>
+                        }
+                        @if (item.idPerformedTreatment) {
+                        <span class="item-linked" pTooltip="Vinculado a evolución #{{ item.idPerformedTreatment }}">
+                            <i class="pi pi-link"></i> Ejecutado
+                        </span>
+                        }
+                    </div>
+                    @if (item.observations) {
+                    <span class="item-obs">{{ item.observations }}</span>
+                    }
+                </div>
+
+                <!-- Precio -->
+                <div class="item-price">{{ item.estimatedPrice | guaranies }}</div>
+
+                <!-- Estado -->
+                <div class="item-status">
+                    <p-tag [value]="getItemStatusInfo(item.status).label"
+                        [severity]="getItemStatusInfo(item.status).severity" />
+                </div>
+
+                <!-- Acciones del ítem -->
+                @if (canEdit(p) && item.status !== 'CANCELLED') {
+                <div class="item-actions">
+                    @if (item.status === 'PENDING') {
+                    <button pButton icon="pi pi-play" severity="info" [text]="true" pTooltip="Marcar en progreso"
+                        (click)="changeItemStatus(item, 'IN_PROGRESS')"></button>
+                    }
+                    @if (item.status === 'IN_PROGRESS') {
+                    <button pButton icon="pi pi-check" severity="success" [text]="true" pTooltip="Marcar completado"
+                        (click)="changeItemStatus(item, 'COMPLETED')"></button>
+                    }
+                    @if (!item.idPerformedTreatment && item.status !== 'COMPLETED') {
+                    <button pButton icon="pi pi-trash" severity="danger" [text]="true" pTooltip="Eliminar"
+                        (click)="confirmRemoveItem(item)"></button>
+                    }
+                </div>
+                }
+            </div>
+            }
+        </div>
+        }
+    </div>
+
+    }
+</div>
+
+<!-- ── Modal Agregar Ítem ────────────────────────────────────────────────────── -->
+<p-dialog header="Agregar Tratamiento al Plan" [(visible)]="showAddItem" [modal]="true" [draggable]="false"
+    [style]="{ width: '500px', maxWidth: '95vw' }" (onHide)="showAddItem.set(false)">
+
+    <form [formGroup]="itemForm" class="form-body">
+
+        <div class="field">
+            <label>Tratamiento <span class="req">*</span></label>
+            <p-select formControlName="idTreatmentCatalog" [options]="treatmentOptions" optionLabel="label"
+                optionValue="value" placeholder="Seleccionar tratamiento" [filter]="true" filterPlaceholder="Buscar..."
+                styleClass="w-full" appendTo="body" (onChange)="onTreatmentSelect($event.value)" />
+            @if (isInvalid('idTreatmentCatalog')) { <small class="error-msg">Requerido</small> }
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Precio estimado (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="estimatedPrice" mode="decimal" [minFractionDigits]="0"
+                    [maxFractionDigits]="0" [min]="0" styleClass="w-full" />
+                @if (isInvalid('estimatedPrice')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Referencia dental</label>
+                <input pInputText formControlName="toothReference" placeholder="Ej: 11, 21, cuadrante I"
+                    class="w-full" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Observaciones</label>
+            <textarea pTextarea formControlName="observations" rows="2" placeholder="Notas específicas de este ítem..."
+                class="w-full resize-none"></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showAddItem.set(false)" />
+        <p-button label="Agregar al plan" icon="pi pi-plus" [loading]="saving()" (onClick)="submitItem()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

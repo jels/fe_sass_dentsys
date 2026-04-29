@@ -1,10 +1,6 @@
-<div class="fixed flex gap-4 top-8 right-8">
-    <p-button type="button" (onClick)="toggleDarkMode()" [rounded]="true"
-        [icon]="isDarkTheme() ? 'pi pi-moon' : 'pi pi-sun'" severity="secondary" />
-    <div class="relative">
-        <!-- <p-button icon="pi pi-palette" pStyleClass="@next" enterFromClass="hidden" enterActiveClass="animate-scalein"
-            leaveToClass="hidden" leaveActiveClass="animate-fadeout" [hideOnOutsideClick]="true" type="button"
-            rounded /> -->
-        <app-configurator />
-    </div>
+<div class="floating-configurator">
+    <button class="floating-configurator__btn" (click)="toggleDarkMode()"
+        [title]="layoutService.isDarkTheme() ? 'Modo claro' : 'Modo oscuro'">
+        <i [class]="layoutService.isDarkTheme() ? 'pi pi-sun' : 'pi pi-moon'"></i>
+    </button>
 </div>

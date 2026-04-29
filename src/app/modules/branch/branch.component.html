@@ -1,0 +1,132 @@
+<div class="module-page">
+
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-map-marker"></i> Sucursales</h1>
+            <p class="page-subtitle">Gestión de sucursales y puntos de expedición SET</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nueva sucursal" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <div class="filter-bar">
+        <p-iconfield>
+            <p-inputicon class="pi pi-search" />
+            <input pInputText [(ngModel)]="search" placeholder="Buscar por nombre, código o dirección..."
+                class="filter-search" />
+        </p-iconfield>
+        <span class="filter-count">{{ filtered.length }} sucursal{{ filtered.length !== 1 ? 'es' : '' }}</span>
+    </div>
+
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3]; track i) { <p-skeleton height="3.5rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="filtered" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Sucursal</th>
+                    <th style="width:130px">Cód. establecimiento</th>
+                    <th>Dirección</th>
+                    <th style="width:130px">Teléfono</th>
+                    <th style="width:130px">Alta</th>
+                    <th class="text-center" style="width:90px">Estado</th>
+                    <th class="text-center" style="width:110px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-b>
+                <tr [class.row-inactive]="!b.active">
+                    <td>
+                        <div class="branch-cell">
+                            <div class="branch-code-badge">{{ b.establishmentCode }}</div>
+                            <div>
+                                <span class="branch-name">{{ b.name }}</span>
+                                <span class="branch-company">{{ b.companyName }}</span>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="mono code-chip">{{ b.establishmentCode }}</span>
+                    </td>
+                    <td>{{ b.address ?? '—' }}</td>
+                    <td>{{ b.phone ?? '—' }}</td>
+                    <td class="mono">{{ b.createdAt | fechaLocal }}</td>
+                    <td class="text-center">
+                        <p-tag [value]="b.active ? 'Activa' : 'Inactiva'"
+                            [severity]="b.active ? 'success' : 'secondary'" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(b)"></button>
+                            <button pButton [icon]="b.active ? 'pi pi-ban' : 'pi pi-check'"
+                                [severity]="b.active ? 'danger' : 'success'" [text]="true"
+                                [pTooltip]="b.active ? 'Desactivar' : 'Activar'" (click)="confirmToggle(b)"></button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="pi pi-map-marker"></i>
+                            <p>No hay sucursales registradas</p>
+                            <p-button icon="pi pi-plus" label="Crear sucursal" size="small" (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal ──────────────────────────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Sucursal' : 'Nueva Sucursal'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '500px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="branchForm" class="form-body">
+
+        <div class="field">
+            <label>Nombre de la sucursal <span class="req">*</span></label>
+            <input pInputText formControlName="name" class="w-full" placeholder="Ej: Sucursal Central, Sede Norte" />
+            @if (isInvalid('name')) { <small class="error-msg">Requerido (mínimo 3 caracteres)</small> }
+        </div>
+
+        <div class="field">
+            <label>Código de establecimiento SET <span class="req">*</span></label>
+            <input pInputText formControlName="establishmentCode" class="w-full mono" placeholder="Ej: 001"
+                maxlength="3" />
+            <small class="field-hint">3 dígitos asignados por la SET Paraguay</small>
+            @if (isInvalid('establishmentCode')) { <small class="error-msg">Requerido — exactamente 3 dígitos</small> }
+        </div>
+
+        <div class="field">
+            <label>Dirección</label>
+            <textarea pTextarea formControlName="address" rows="2" class="w-full resize-none"
+                placeholder="Dirección de la sucursal"></textarea>
+        </div>
+
+        <div class="field">
+            <label>Teléfono</label>
+            <input pInputText formControlName="phone" class="w-full" placeholder="Ej: 0981 000 000" />
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Crear sucursal'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right"></p-toast>

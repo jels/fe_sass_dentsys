@@ -1,0 +1,15 @@
+<div class="page-header">
+    <div class="page-header__info">
+        <div class="page-header__icon-wrap" *ngIf="icon">
+            <i [class]="icon"></i>
+        </div>
+        <div>
+            <h2 class="page-header__title">{{ title }}</h2>
+            <p class="page-header__subtitle" *ngIf="subtitle">{{ subtitle }}</p>
+        </div>
+    </div>
+    <div class="page-header__actions" *ngIf="visibleActions.length">
+        <p-button *ngFor="let action of visibleActions" [label]="action.label" [icon]="action.icon"
+            [severity]="action.severity ?? 'primary'" (onClick)="action.onClick()" size="small" />
+    </div>
+</div>

@@ -1,40 +1,64 @@
-import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
+import { Component, inject, signal } from '@angular/core';
+import { FormBuilder, FormGroup, FormsModule, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { CheckboxModule } from 'primeng/checkbox';
 import { FloatLabelModule } from 'primeng/floatlabel';
 import { InputTextModule } from 'primeng/inputtext';
-import { PasswordModule } from 'primeng/password';
-import { RippleModule } from 'primeng/ripple';
+import { MessageService } from 'primeng/api';
+import { ToastModule } from 'primeng/toast';
 import { FloatingconfiguratorComponent } from '../../layout/floatingconfigurator/floatingconfigurator.component';
-import { NotificationService } from '../../shared/components/notification-modal/notification.service';
+import { APP_ROUTES, TOAST_LIFE } from '../../core/models/app.constants';
 
 @Component({
     selector: 'app-forgot',
-    imports: [ButtonModule, CheckboxModule, InputTextModule, PasswordModule, FormsModule, RouterModule, RippleModule, FloatingconfiguratorComponent, FloatLabelModule],
+    standalone: true,
+    imports: [FormsModule, ReactiveFormsModule, RouterModule, ButtonModule, FloatLabelModule, InputTextModule, FloatingconfiguratorComponent, ToastModule],
     templateUrl: './forgot.component.html',
-    styleUrl: './forgot.component.scss'
+    styleUrl: './forgot.component.scss',
+    providers: [MessageService]
 })
 export class ForgotComponent {
-    email: string = '';
+    private fb = inject(FormBuilder);
+    private router = inject(Router);
+    private messageService = inject(MessageService);
 
-    constructor(
-        private notifier: NotificationService,
-        private router: Router
-    ) {}
+    forgotForm: FormGroup;
+    loading = signal(false);
+    sent = signal(false);
 
-    sendForgot() {
-        this.loginExitoso('Correo enviado con Éxito, verifique su email...', null, 3000);
-        this.router.navigate(['auth/login']);
+    constructor() {
+        this.forgotForm = this.fb.group({
+            email: ['', [Validators.required, Validators.email]]
+        });
     }
 
-    login() {
-        this.loginExitoso('Te recordaste tu contraseña, que bueno!', null, 3000);
-        this.router.navigate(['auth/login']);
+    get emailInvalid(): boolean {
+        const ctrl = this.forgotForm.get('email');
+        return !!(ctrl?.invalid && ctrl?.touched);
     }
 
-    loginExitoso(mensaje: string, imagen: string | null, time: number) {
-        this.notifier.success(mensaje, imagen!, time);
+    onSubmit(): void {
+        if (this.forgotForm.invalid) {
+            this.forgotForm.markAllAsTouched();
+            return;
+        }
+
+        this.loading.set(true);
+
+        // TODO: conectar con el endpoint real de recuperación
+        setTimeout(() => {
+            this.loading.set(false);
+            this.sent.set(true);
+            this.messageService.add({
+                severity: 'success',
+                summary: 'Correo enviado',
+                detail: 'Si el email existe, recibirás las instrucciones en breve.',
+                life: TOAST_LIFE
+            });
+        }, 1500);
+    }
+
+    goToLogin(): void {
+        this.router.navigate([APP_ROUTES.AUTH.LOGIN]);
     }
 }

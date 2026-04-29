@@ -1,38 +1,43 @@
-<ng-container>
-  @if (root && item.visible !== false) {
-    <div class="layout-menuitem-root-text">{{ item.label }}</div>
-  }
-  @if ((!item.routerLink || item.items) && item.visible !== false) {
-    <a [attr.href]="item.url"
-      (click)="itemClick($event)" [ngClass]="item.styleClass" [attr.target]="item.target" tabindex="0" pRipple>
-      <i [ngClass]="item.icon" class="layout-menuitem-icon"></i>
-      <span class="layout-menuitem-text">{{ item.label }}</span>
-      @if (item.items) {
-        <i class="pi pi-fw pi-angle-down layout-submenu-toggler"></i>
-      }
-    </a>
-  }
-  @if (item.routerLink && !item.items && item.visible !== false) {
-    <a (click)="itemClick($event)"
-      [ngClass]="item.styleClass" [routerLink]="item.routerLink" routerLinkActive="active-route"
-      [routerLinkActiveOptions]="item.routerLinkActiveOptions || { paths: 'exact', queryParams: 'ignored', matrixParams: 'ignored', fragment: 'ignored' }"
-      [fragment]="item.fragment" [queryParamsHandling]="item.queryParamsHandling"
-      [preserveFragment]="item.preserveFragment" [skipLocationChange]="item.skipLocationChange"
-      [replaceUrl]="item.replaceUrl" [state]="item.state" [queryParams]="item.queryParams" [attr.target]="item.target"
-      tabindex="0" pRipple>
-      <i [ngClass]="item.icon" class="layout-menuitem-icon"></i>
-      <span class="layout-menuitem-text">{{ item.label }}</span>
-      @if (item.items) {
-        <i class="pi pi-fw pi-angle-down layout-submenu-toggler"></i>
-      }
-    </a>
+@if (root && item.visible !== false) {
+<li>
+  <div class="layout-menu-label">{{ item.label }}</div>
+  <ul>
+    @for (child of item.items; track child.label) {
+    <li app-menuitem [item]="child" [index]="$index" [parentKey]="key" [root]="false">
+    </li>
+    }
+  </ul>
+</li>
+}
+
+@if (!root && item.visible !== false) {
+<li [class.active-menuitem]="active">
+
+  @if (item.items) {
+  <!-- Ítem con submenú -->
+  <a class="layout-menu-item" (click)="itemClick($event)" pRipple>
+    <i [class]="item.icon + ' layout-menu-item__icon'"></i>
+    <span class="layout-menu-item__label">{{ item.label }}</span>
+    <i class="pi layout-menu-item__arrow" [class.pi-angle-down]="active" [class.pi-angle-right]="!active">
+    </i>
+  </a>
+  <ul [@children]="active ? 'expanded' : 'collapsed'" class="layout-submenu">
+    @for (child of item.items; track child.label) {
+    <li app-menuitem [item]="child" [index]="$index" [parentKey]="key" [root]="false">
+    </li>
+    }
+  </ul>
+  } @else {
+  <!-- Ítem hoja con routerLink -->
+  <a class="layout-menu-item" [routerLink]="item.routerLink" routerLinkActive="active-route"
+    [routerLinkActiveOptions]="{ exact: false }" (click)="itemClick($event)" pRipple>
+    <i [class]="item.icon + ' layout-menu-item__icon'"></i>
+    <span class="layout-menu-item__label">{{ item.label }}</span>
+    @if (item.badge) {
+    <span class="layout-menu-item__badge">{{ item.badge }}</span>
+    }
+  </a>
   }
 
-  @if (item.items && item.visible !== false) {
-    <ul [@children]="submenuAnimation">
-      @for (child of item.items; track child; let i = $index) {
-        <li app-menuitem [item]="child" [index]="i" [parentKey]="key" [class]="child['badgeClass']"></li>
-      }
-    </ul>
-  }
-</ng-container>
+</li>
+}

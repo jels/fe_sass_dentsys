@@ -1,0 +1,407 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-file-check"></i> Facturas</h1>
+            <p class="page-subtitle">Emisión y seguimiento de facturas SET Paraguay</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nueva factura" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Stats ────────────────────────────────────────────────────────────── -->
+    <div class="stats-row">
+        <div class="stat-pill">
+            <span class="stat-pill__label">Total emitido</span>
+            <span class="stat-pill__value">{{ totalSummary.total | guaranies }}</span>
+        </div>
+        <div class="stat-pill stat-pill--success">
+            <span class="stat-pill__label">Cobrado</span>
+            <span class="stat-pill__value">{{ totalSummary.paid | guaranies }}</span>
+        </div>
+        <div class="stat-pill stat-pill--warn">
+            <span class="stat-pill__label">Pendiente</span>
+            <span class="stat-pill__value">{{ totalSummary.pending | guaranies }}</span>
+        </div>
+    </div>
+
+    <!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+    <div class="filter-bar filter-bar--wrap">
+        <div class="date-range">
+            <p-datepicker [(ngModel)]="filterDateFrom" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="date-input"
+                (onSelect)="load()" />
+            <span class="date-sep">→</span>
+            <p-datepicker [(ngModel)]="filterDateTo" dateFormat="dd/mm/yy" [showIcon]="true" styleClass="date-input"
+                (onSelect)="load()" />
+        </div>
+        <p-select [options]="patientFilterOpts" [(ngModel)]="filterPatient" optionLabel="label" optionValue="value"
+            placeholder="Paciente" [filter]="true" styleClass="filter-sel" (onChange)="load()" />
+        <p-select [options]="statusFilterOpts" [(ngModel)]="filterStatus" optionLabel="label" optionValue="value"
+            styleClass="filter-sel" (onChange)="load()" />
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4]; track i) { <p-skeleton height="3.5rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="invoices()" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true"
+            [paginator]="invoices().length > 15" [rows]="15">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th style="width:150px">Nro. Factura</th>
+                    <th>Paciente</th>
+                    <th style="width:100px">Condición</th>
+                    <th style="width:130px">Fecha</th>
+                    <th class="text-right" style="width:140px">Total</th>
+                    <th class="text-right" style="width:140px">Saldo</th>
+                    <th class="text-center" style="width:120px">Estado</th>
+                    <th class="text-center" style="width:140px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-inv>
+                <tr [class.row-voided]="inv.status === 'VOIDED'">
+                    <td>
+                        <span class="invoice-number mono" (click)="openDetail(inv)">
+                            {{ inv.invoiceNumber }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="person-name">{{ inv.patientFullName }}</span>
+                        @if (inv.patientIdNumber) {
+                        <span class="person-doc mono">{{ inv.patientIdNumber }}</span>
+                        }
+                    </td>
+                    <td>
+                        <span [class]="inv.paymentCondition === 'CREDIT' ? 'cond-credit' : 'cond-cash'">
+                            {{ getConditionLabel(inv.paymentCondition) }}
+                        </span>
+                    </td>
+                    <td class="mono">{{ inv.issueDatetime | fechaLocal : true }}</td>
+                    <td class="text-right mono fw-bold">{{ inv.total | guaranies }}</td>
+                    <td class="text-right">
+                        <span [class]="inv.outstandingBalance > 0 ? 'balance-pending' : 'balance-paid'">
+                            {{ inv.outstandingBalance | guaranies }}
+                        </span>
+                    </td>
+                    <td class="text-center">
+                        <p-tag [value]="getStatusInfo(inv.status).label"
+                            [severity]="getStatusInfo(inv.status).severity" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-eye" severity="secondary" [text]="true" pTooltip="Ver detalle"
+                                (click)="openDetail(inv)"></button>
+                            @if (inv.status === 'ISSUED' || inv.status === 'PARTIAL') {
+                            <button pButton icon="pi pi-dollar" severity="success" [text]="true"
+                                pTooltip="Registrar pago" (click)="openPay(inv)"></button>
+                            <button pButton icon="pi pi-ban" severity="danger" [text]="true" pTooltip="Anular"
+                                (click)="openVoid(inv)"></button>
+                            }
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="8">
+                        <div class="empty-state">
+                            <i class="pi pi-file-check"></i>
+                            <p>No hay facturas para este período</p>
+                            <p-button icon="pi pi-plus" label="Emitir factura" size="small" (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: NUEVA FACTURA                                                       -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Nueva Factura" [(visible)]="showForm" [modal]="true" [draggable]="false"
+    [style]="{ width: '780px', maxWidth: '97vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="invoiceForm" class="form-body">
+
+        <!-- Datos del encabezado -->
+        <p class="form-section-title">Encabezado</p>
+
+        <div class="form-grid-3">
+            <div class="field">
+                <label>Paciente <span class="req">*</span></label>
+                <p-select formControlName="idPatient" [options]="patientOptions" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar" [filter]="true" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('idPatient')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Timbrado <span class="req">*</span></label>
+                <p-select formControlName="idInvoiceStamp" [options]="stampOptions" optionLabel="label"
+                    optionValue="value" placeholder="Seleccionar" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('idInvoiceStamp')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Condición de pago <span class="req">*</span></label>
+                <p-select formControlName="paymentCondition" [options]="conditionOptions" optionLabel="label"
+                    optionValue="value" styleClass="w-full" appendTo="body" />
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Concepto <span class="req">*</span></label>
+            <input pInputText formControlName="concept" placeholder="Ej: Servicios odontológicos realizados..."
+                class="w-full" />
+            @if (isInvalid('concept')) { <small class="error-msg">Requerido</small> }
+        </div>
+
+        <!-- Ítems -->
+        <div class="items-header">
+            <p class="form-section-title" style="margin:0">Ítems</p>
+            <button pButton icon="pi pi-plus" label="Agregar ítem" size="small" severity="secondary" [outlined]="true"
+                type="button" (click)="addItem()"></button>
+        </div>
+
+        <div class="items-table-wrap">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th style="width:70px">Cant.</th>
+                        <th style="width:130px">P. Unitario</th>
+                        <th style="width:110px">Descuento</th>
+                        <th style="width:110px">IVA</th>
+                        <th style="width:120px" class="text-right">Subtotal</th>
+                        <th style="width:40px"></th>
+                    </tr>
+                </thead>
+                <tbody formArrayName="items">
+                    @for (item of itemsArray.controls; track $index; let i = $index) {
+                    <tr [formGroupName]="i">
+                        <td>
+                            <input pInputText formControlName="description" class="w-full" placeholder="Descripción" />
+                            @if (isItemInvalid(i,'description')) { <small class="error-msg">Requerido</small> }
+                        </td>
+                        <td>
+                            <p-inputNumber formControlName="quantity" [min]="1" styleClass="w-full" [showButtons]="true"
+                                buttonLayout="horizontal" decrementButtonClass="p-button-secondary"
+                                incrementButtonClass="p-button-secondary" />
+                        </td>
+                        <td>
+                            <p-inputNumber formControlName="unitPrice" mode="decimal" [min]="0" [minFractionDigits]="0"
+                                styleClass="w-full" />
+                            @if (isItemInvalid(i,'unitPrice')) { <small class="error-msg">Requerido</small> }
+                        </td>
+                        <td>
+                            <p-inputNumber formControlName="discount" mode="decimal" [min]="0" [minFractionDigits]="0"
+                                styleClass="w-full" />
+                        </td>
+                        <td>
+                            <p-select formControlName="taxType" [options]="taxTypeOptions" optionLabel="label"
+                                optionValue="value" styleClass="w-full" appendTo="body" />
+                        </td>
+                        <td class="text-right mono fw-bold">
+                            {{ calcItemSubtotal(item.value) | guaranies }}
+                        </td>
+                        <td class="text-center">
+                            <button pButton icon="pi pi-trash" severity="danger" [text]="true" type="button"
+                                [disabled]="itemsArray.length === 1" (click)="removeItem(i)"></button>
+                        </td>
+                    </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totales -->
+        <div class="totals-box">
+            <div class="totals-grid">
+                @if (calcTotals().exempt > 0) {
+                <span class="total-label">Exento</span>
+                <span class="total-value mono">{{ calcTotals().exempt | guaranies }}</span>
+                }
+                @if (calcTotals().base5 > 0) {
+                <span class="total-label">Gravado 5%</span>
+                <span class="total-value mono">{{ calcTotals().base5 | guaranies }}</span>
+                <span class="total-label total-label--vat">IVA (5%)</span>
+                <span class="total-value mono total-value--vat">{{ calcTotals().vat5 | guaranies }}</span>
+                }
+                @if (calcTotals().base10 > 0) {
+                <span class="total-label">Gravado 10%</span>
+                <span class="total-value mono">{{ calcTotals().base10 | guaranies }}</span>
+                <span class="total-label total-label--vat">IVA (10%)</span>
+                <span class="total-value mono total-value--vat">{{ calcTotals().vat10 | guaranies }}</span>
+                }
+                <span class="total-label total-label--total">TOTAL</span>
+                <span class="total-value total-value--total mono">{{ calcTotals().total | guaranies }}</span>
+            </div>
+        </div>
+
+        <div class="field">
+            <label>Notas</label>
+            <textarea pTextarea formControlName="notes" rows="2" class="w-full resize-none"
+                placeholder="Observaciones opcionales..."></textarea>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button label="Emitir factura" icon="pi pi-file-check" [loading]="saving()" (onClick)="submitInvoice()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODAL: DETALLE DE FACTURA                                                  -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<p-dialog header="Detalle de Factura" [(visible)]="showDetail" [modal]="true" [draggable]="false"
+    [style]="{ width: '680px', maxWidth: '97vw' }">
+    @if (selected(); as inv) {
+    <div class="detail-invoice">
+
+        <!-- Encabezado -->
+        <div class="inv-header">
+            <div>
+                <span class="inv-number mono">{{ inv.invoiceNumber }}</span>
+                <p-tag [value]="getStatusInfo(inv.status).label" [severity]="getStatusInfo(inv.status).severity"
+                    class="ml-2" />
+            </div>
+            <div class="inv-meta">
+                <span><strong>Paciente:</strong> {{ inv.patientFullName }}</span>
+                @if (inv.patientIdNumber) { <span class="mono">CI: {{ inv.patientIdNumber }}</span> }
+                <span><strong>Fecha:</strong> {{ inv.issueDatetime | fechaLocal : true }}</span>
+                <span><strong>Condición:</strong> {{ getConditionLabel(inv.paymentCondition) }}</span>
+            </div>
+            <p class="inv-concept">{{ inv.concept }}</p>
+        </div>
+
+        <p-divider />
+
+        <!-- Ítems -->
+        @if (inv.items && inv.items.length > 0) {
+        <table class="detail-items-table">
+            <thead>
+                <tr>
+                    <th>Descripción</th>
+                    <th class="text-center">Cant.</th>
+                    <th class="text-right">P. Unit.</th>
+                    <th class="text-right">Desc.</th>
+                    <th class="text-right">Subtotal</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (item of inv.items; track item.idInvoiceItem) {
+                <tr>
+                    <td>{{ item.description }}</td>
+                    <td class="text-center">{{ item.quantity }}</td>
+                    <td class="text-right mono">{{ item.unitPrice | guaranies }}</td>
+                    <td class="text-right mono">{{ item.discount | guaranies }}</td>
+                    <td class="text-right mono fw-bold">{{ item.subtotal | guaranies }}</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+        <p-divider />
+        }
+
+        <!-- Totales -->
+        <div class="inv-totals">
+            @if (inv.exemptAmount > 0) {
+            <div class="inv-total-row"><span>Exento</span><span class="mono">{{ inv.exemptAmount | guaranies }}</span>
+            </div>
+            }
+            @if (inv.taxable5 > 0) {
+            <div class="inv-total-row"><span>Gravado 5%</span><span class="mono">{{ inv.taxable5 | guaranies }}</span>
+            </div>
+            <div class="inv-total-row vat-row"><span>IVA 5%</span><span class="mono">{{ inv.vat5 | guaranies }}</span>
+            </div>
+            }
+            @if (inv.taxable10 > 0) {
+            <div class="inv-total-row"><span>Gravado 10%</span><span class="mono">{{ inv.taxable10 | guaranies }}</span>
+            </div>
+            <div class="inv-total-row vat-row"><span>IVA 10%</span><span class="mono">{{ inv.vat10 | guaranies }}</span>
+            </div>
+            }
+            <div class="inv-total-row inv-total-row--total">
+                <span>TOTAL</span><span class="mono">{{ inv.total | guaranies }}</span>
+            </div>
+            <div class="inv-total-row inv-total-row--paid">
+                <span>Pagado</span><span class="mono">{{ inv.totalPaid | guaranies }}</span>
+            </div>
+            @if (inv.outstandingBalance > 0) {
+            <div class="inv-total-row inv-total-row--pending">
+                <span>Saldo pendiente</span><span class="mono">{{ inv.outstandingBalance | guaranies }}</span>
+            </div>
+            }
+        </div>
+    </div>
+    }
+    <ng-template pTemplate="footer">
+        <p-button label="Cerrar" severity="secondary" [outlined]="true" (onClick)="showDetail.set(false)" />
+        @if (selected()?.status === 'ISSUED' || selected()?.status === 'PARTIAL') {
+        <p-button label="Registrar pago" icon="pi pi-dollar" severity="success" (onClick)="openPay(selected()!)" />
+        <p-button label="Anular" icon="pi pi-ban" severity="danger" [outlined]="true"
+            (onClick)="openVoid(selected()!)" />
+        }
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Pago ────────────────────────────────────────────────────────────── -->
+<p-dialog header="Registrar Pago" [(visible)]="showPay" [modal]="true" [draggable]="false" [style]="{ width: '440px' }"
+    (onHide)="showPay.set(false)">
+    @if (selected(); as inv) {
+    <div class="pay-banner">
+        <span>Saldo pendiente</span>
+        <span class="pay-balance mono">{{ inv.outstandingBalance | guaranies }}</span>
+    </div>
+    }
+    <form [formGroup]="payForm" class="form-body">
+        <div class="field">
+            <label>Monto a pagar (Gs.) <span class="req">*</span></label>
+            <p-inputNumber formControlName="amount" mode="decimal" [minFractionDigits]="0" [min]="1"
+                styleClass="w-full" />
+            @if (isInvalid('amount', payForm)) { <small class="error-msg">Requerido</small> }
+        </div>
+        <div class="field">
+            <label>Método de pago <span class="req">*</span></label>
+            <p-select formControlName="paymentMethod" [options]="payMethodOptions" optionLabel="label"
+                optionValue="value" styleClass="w-full" appendTo="body" />
+        </div>
+        <div class="field">
+            <label>Concepto <span class="req">*</span></label>
+            <input pInputText formControlName="concept" class="w-full" />
+        </div>
+    </form>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showPay.set(false)" />
+        <p-button label="Confirmar pago" icon="pi pi-check" severity="success" [loading]="savingPay()"
+            (onClick)="submitPay()" />
+    </ng-template>
+</p-dialog>
+
+<!-- ── Modal Anulación ───────────────────────────────────────────────────────── -->
+<p-dialog header="Anular Factura" [(visible)]="showVoid" [modal]="true" [draggable]="false" [style]="{ width: '400px' }"
+    (onHide)="showVoid.set(false)">
+    <div class="form-body">
+        <div class="field">
+            <label>Motivo de anulación <span class="req">*</span></label>
+            <textarea pTextarea [(ngModel)]="voidReason" rows="3" placeholder="Detallá el motivo de la anulación..."
+                class="w-full resize-none"></textarea>
+        </div>
+    </div>
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showVoid.set(false)" />
+        <p-button label="Anular factura" icon="pi pi-ban" severity="danger" (onClick)="submitVoid()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

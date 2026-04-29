@@ -1,0 +1,274 @@
+<div class="dashboard">
+
+    <!-- ── Encabezado ───────────────────────────────────────────────────────── -->
+    <div class="dash-header">
+        <div class="dash-greeting">
+            <h1 class="dash-title">{{ greeting }}, {{ authService.fullName() }}</h1>
+            <p class="dash-subtitle">
+                @if (summary(); as s) { {{ s.branchName }} }
+                — Resumen del día
+            </p>
+        </div>
+        <div class="dash-date-ctrl">
+            <p-datepicker [(ngModel)]="filterDate" dateFormat="dd/mm/yy" [showIcon]="true" [maxDate]="today"
+                styleClass="dash-date-input" (onSelect)="onDateChange()" />
+            @if (!isToday) {
+            <button pButton label="Hoy" severity="secondary" [outlined]="true" size="small"
+                (click)="filterDate = today; onDateChange()"></button>
+            }
+            <button pButton icon="pi pi-refresh" severity="secondary" [text]="true" pTooltip="Actualizar"
+                (click)="loadAll()"></button>
+        </div>
+    </div>
+
+    @if (loadingSummary()) {
+    <!-- Skeleton KPIs -->
+    <div class="kpi-grid">
+        @for (i of [1,2,3,4]; track i) { <p-skeleton height="110px" borderRadius="0.75rem" /> }
+    </div>
+    } @else if (summary(); as s) {
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- KPI CARDS                                                          -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div class="kpi-grid">
+
+        <!-- Pacientes -->
+        <div class="kpi-card kpi-patients" (click)="goTo('/modules/patients')" role="button">
+            <div class="kpi-icon"><i class="pi pi-users"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value">{{ s.patients.withAppointmentToday }}</span>
+                <span class="kpi-label">Pacientes hoy</span>
+                <div class="kpi-sub-row">
+                    <span class="kpi-sub">{{ s.patients.totalActive }} activos</span>
+                    @if (s.patients.newToday > 0) {
+                    <span class="kpi-badge kpi-badge--new">+{{ s.patients.newToday }} nuevos</span>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <!-- Citas -->
+        <div class="kpi-card kpi-appointments" (click)="goTo('/modules/scheduling')" role="button">
+            <div class="kpi-icon"><i class="pi pi-calendar"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value">{{ s.appointments.total }}</span>
+                <span class="kpi-label">Citas del día</span>
+                <div class="kpi-progress-row">
+                    <p-progressBar [value]="appointmentPct(s.appointments.attended, s.appointments.total)"
+                        [showValue]="false" [style]="{ height: '5px' }" />
+                    <span class="kpi-sub">{{ s.appointments.attended }} atendidas · {{ s.appointments.attendanceRate }}%
+                        asistencia</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Facturación -->
+        <div class="kpi-card kpi-billing" (click)="goTo('/modules/invoicing')" role="button">
+            <div class="kpi-icon"><i class="pi pi-file-check"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value">{{ s.billing.totalToday | guaranies }}</span>
+                <span class="kpi-label">Facturado hoy</span>
+                <div class="kpi-progress-row">
+                    <p-progressBar [value]="billingCollectedPct(s)" [showValue]="false" [style]="{ height: '5px' }" />
+                    <span class="kpi-sub">{{ s.billing.totalPaidToday | guaranies }} cobrado · {{
+                        s.billing.invoicesToday }} facturas</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Caja -->
+        <div class="kpi-card kpi-cash" (click)="goTo('/modules/cash-book')" role="button">
+            <div class="kpi-icon"><i class="pi pi-wallet"></i></div>
+            <div class="kpi-body">
+                <span class="kpi-value" [class.kpi-value--negative]="s.cash.todayBalance < 0">
+                    {{ s.cash.todayBalance | guaranies }}
+                </span>
+                <span class="kpi-label">Balance de caja</span>
+                <div class="kpi-sub-row">
+                    <span class="kpi-sub income-sub">↑ {{ s.cash.todayIncome | guaranies }}</span>
+                    <span class="kpi-sub expense-sub">↓ {{ s.cash.todayExpense | guaranies }}</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- FILA DE DETALLE: Citas + Facturación mes                          -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div class="detail-grid">
+
+        <!-- Citas detalle -->
+        <div class="detail-card">
+            <div class="detail-card__header">
+                <h3 class="detail-card__title"><i class="pi pi-calendar"></i> Citas del día</h3>
+                <button pButton label="Ver agenda" severity="secondary" [text]="true" size="small"
+                    (click)="goTo('/modules/scheduling')"></button>
+            </div>
+
+            <div class="appt-status-list">
+                <div class="appt-status-row">
+                    <span class="status-dot status-dot--warn"></span>
+                    <span class="status-name">Pendientes</span>
+                    <span class="status-count">{{ s.appointments.pending }}</span>
+                    <div class="status-bar-wrap">
+                        <div class="status-bar status-bar--warn"
+                            [style.width.%]="appointmentPct(s.appointments.pending, s.appointments.total)"></div>
+                    </div>
+                </div>
+                <div class="appt-status-row">
+                    <span class="status-dot status-dot--info"></span>
+                    <span class="status-name">Confirmadas</span>
+                    <span class="status-count">{{ s.appointments.confirmed }}</span>
+                    <div class="status-bar-wrap">
+                        <div class="status-bar status-bar--info"
+                            [style.width.%]="appointmentPct(s.appointments.confirmed, s.appointments.total)"></div>
+                    </div>
+                </div>
+                <div class="appt-status-row">
+                    <span class="status-dot status-dot--success"></span>
+                    <span class="status-name">Atendidas</span>
+                    <span class="status-count">{{ s.appointments.attended }}</span>
+                    <div class="status-bar-wrap">
+                        <div class="status-bar status-bar--success"
+                            [style.width.%]="appointmentPct(s.appointments.attended, s.appointments.total)"></div>
+                    </div>
+                </div>
+                <div class="appt-status-row">
+                    <span class="status-dot status-dot--danger"></span>
+                    <span class="status-name">Canceladas</span>
+                    <span class="status-count">{{ s.appointments.cancelled }}</span>
+                    <div class="status-bar-wrap">
+                        <div class="status-bar status-bar--danger"
+                            [style.width.%]="appointmentPct(s.appointments.cancelled, s.appointments.total)"></div>
+                    </div>
+                </div>
+                <div class="appt-status-row">
+                    <span class="status-dot status-dot--secondary"></span>
+                    <span class="status-name">No se presentó</span>
+                    <span class="status-count">{{ s.appointments.noShow }}</span>
+                    <div class="status-bar-wrap">
+                        <div class="status-bar status-bar--secondary"
+                            [style.width.%]="appointmentPct(s.appointments.noShow, s.appointments.total)"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Por dentista -->
+            @if (s.appointments.byDoctor.length > 0) {
+            <p-divider />
+            <h4 class="detail-sub-title">Por dentista</h4>
+            <div class="doctor-list">
+                @for (d of s.appointments.byDoctor; track d.idDoctor) {
+                <div class="doctor-row">
+                    <div class="doctor-avatar">{{ d.doctorName[0] }}</div>
+                    <span class="doctor-name">{{ d.doctorName }}</span>
+                    <span class="doctor-stat">{{ d.attended }}/{{ d.total }}</span>
+                    <p-progressBar [value]="appointmentPct(d.attended, d.total)" [showValue]="false"
+                        [style]="{ height: '4px', flex: 1 }" />
+                </div>
+                }
+            </div>
+            }
+        </div>
+
+        <!-- Facturación mes -->
+        <div class="detail-card">
+            <div class="detail-card__header">
+                <h3 class="detail-card__title"><i class="pi pi-chart-bar"></i> Facturación del mes</h3>
+                <button pButton label="Ver facturas" severity="secondary" [text]="true" size="small"
+                    (click)="goTo('/modules/invoicing')"></button>
+            </div>
+
+            <div class="billing-month-stats">
+                <div class="billing-stat">
+                    <span class="bs-label">Total emitido</span>
+                    <span class="bs-value mono">{{ s.billing.monthTotal | guaranies }}</span>
+                </div>
+                <div class="billing-stat">
+                    <span class="bs-label">Cobrado</span>
+                    <span class="bs-value mono bs-value--success">{{ s.billing.monthPaid | guaranies }}</span>
+                </div>
+                <div class="billing-stat">
+                    <span class="bs-label">Pendiente</span>
+                    <span class="bs-value mono bs-value--warn">{{ s.billing.monthPending | guaranies }}</span>
+                </div>
+            </div>
+
+            <p-divider />
+
+            <div class="billing-month-stats">
+                <div class="billing-stat">
+                    <span class="bs-label">Ingresos caja (mes)</span>
+                    <span class="bs-value mono bs-value--success">{{ s.cash.monthIncome | guaranies }}</span>
+                </div>
+                <div class="billing-stat">
+                    <span class="bs-label">Egresos caja (mes)</span>
+                    <span class="bs-value mono bs-value--danger">{{ s.cash.monthExpense | guaranies }}</span>
+                </div>
+                <div class="billing-stat">
+                    <span class="bs-label">Balance caja (mes)</span>
+                    <span class="bs-value mono" [class.bs-value--success]="s.cash.monthBalance >= 0"
+                        [class.bs-value--danger]="s.cash.monthBalance < 0">
+                        {{ s.cash.monthBalance | guaranies }}
+                    </span>
+                </div>
+            </div>
+
+            <p-divider />
+
+            <div class="billing-cond-row">
+                <div class="cond-item">
+                    <i class="pi pi-check-circle" style="color: var(--p-green-500)"></i>
+                    <span>Contado: <strong>{{ s.billing.cashInvoices }}</strong></span>
+                </div>
+                <div class="cond-item">
+                    <i class="pi pi-clock" style="color: var(--p-blue-500)"></i>
+                    <span>Crédito: <strong>{{ s.billing.creditInvoices }}</strong></span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <!-- CHARTS                                                             -->
+    <!-- ══════════════════════════════════════════════════════════════════ -->
+    <div class="charts-grid">
+
+        <!-- Citas semana -->
+        <div class="chart-card">
+            <div class="chart-card__header">
+                <h3 class="chart-card__title"><i class="pi pi-chart-bar"></i> Citas — últimos 7 días</h3>
+            </div>
+            @if (loadingWeekly()) {
+            <p-skeleton height="220px" />
+            } @else if (weeklyChartData) {
+            <div class="chart-wrap">
+                <p-chart type="bar" [data]="weeklyChartData" [options]="weeklyChartOpts" />
+            </div>
+            }
+        </div>
+
+        <!-- Facturación mes -->
+        <div class="chart-card">
+            <div class="chart-card__header">
+                <h3 class="chart-card__title"><i class="pi pi-chart-line"></i> Facturación — mes actual</h3>
+                <button pButton label="Ver reportes" severity="secondary" [text]="true" size="small"
+                    (click)="goTo('/modules/reports')"></button>
+            </div>
+            @if (loadingMonthly()) {
+            <p-skeleton height="220px" />
+            } @else if (monthlyChartData) {
+            <div class="chart-wrap">
+                <p-chart type="line" [data]="monthlyChartData" [options]="monthlyChartOpts" />
+            </div>
+            }
+        </div>
+
+    </div>
+
+    } <!-- end @else if summary -->
+
+</div>

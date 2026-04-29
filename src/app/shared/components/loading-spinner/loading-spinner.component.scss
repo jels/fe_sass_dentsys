@@ -1,0 +1,26 @@
+.loading-spinner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem;
+    gap: 1rem;
+
+    &--overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.75);
+        z-index: 9999;
+    }
+
+    &__spinner {
+        width: 3rem !important;
+        height: 3rem !important;
+    }
+
+    &__message {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--p-surface-500);
+    }
+}

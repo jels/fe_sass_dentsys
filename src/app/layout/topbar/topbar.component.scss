@@ -1,0 +1,110 @@
+.layout-topbar {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4rem;
+    padding: 0 1.5rem;
+    background: var(--p-surface-0);
+    border-bottom: 1px solid var(--p-surface-200);
+    z-index: 999;
+
+    :host-context(.app-dark) & {
+        background: var(--p-surface-900);
+        border-bottom-color: var(--p-surface-700);
+    }
+}
+
+.layout-topbar-logo {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-decoration: none;
+    margin-right: auto;
+
+    &__img {
+        height: 2rem;
+        width: auto;
+    }
+
+    &__text {
+        font-size: 1.125rem;
+        font-weight: 700;
+        color: var(--p-primary-color);
+        letter-spacing: 0.05em;
+    }
+}
+
+.layout-menu-button {
+    order: -1;
+}
+
+.layout-topbar-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.layout-topbar-action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: var(--p-surface-600);
+    transition: background 0.2s;
+
+    &:hover {
+        background: var(--p-surface-100);
+
+        :host-context(.app-dark) & {
+            background: var(--p-surface-800);
+        }
+    }
+
+    i {
+        font-size: 1.1rem;
+    }
+
+    &--avatar {
+        width: auto;
+        height: auto;
+        border-radius: 50%;
+        padding: 0;
+    }
+}
+
+.layout-topbar-avatar {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    font-size: 0.8rem !important;
+    background: var(--p-primary-100) !important;
+    color: var(--p-primary-700) !important;
+    cursor: pointer;
+}
+
+.topbar-logout-body {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.5rem 0;
+
+    p {
+        margin: 0;
+        font-size: 0.95rem;
+        color: var(--p-surface-700);
+    }
+}
+
+.topbar-logout-icon {
+    font-size: 1.75rem;
+    color: var(--p-red-500);
+    flex-shrink: 0;
+}

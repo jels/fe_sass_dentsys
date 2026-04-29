@@ -4,58 +4,51 @@ import { Router, RouterModule } from '@angular/router';
 import { MenuItem } from 'primeng/api';
 import { StyleClassModule } from 'primeng/styleclass';
 import { TooltipModule } from 'primeng/tooltip';
+import { ButtonModule } from 'primeng/button';
+import { DialogModule } from 'primeng/dialog';
+import { AvatarModule } from 'primeng/avatar';
 import { LayoutService } from '../../core/services/conf/layout.service';
 import { ConfiguratorComponent } from '../configurator/configurator.component';
-import { DialogModule } from 'primeng/dialog';
-import { ButtonModule } from 'primeng/button';
-import { AuthService } from '../../core/services/api/auth.service';
+import { InitialsPipe } from '../../shared/pipes/initials.pipe';
+import { AuthService } from '../../core/services/auth.service';
 
 @Component({
     selector: 'app-topbar',
-    imports: [RouterModule, CommonModule, StyleClassModule, ConfiguratorComponent, TooltipModule, DialogModule, ButtonModule],
+    standalone: true,
+    imports: [CommonModule, RouterModule, StyleClassModule, TooltipModule, ButtonModule, DialogModule, AvatarModule, ConfiguratorComponent, InitialsPipe],
     templateUrl: './topbar.component.html',
     styleUrl: './topbar.component.scss'
 })
 export class TopbarComponent {
     items!: MenuItem[];
+    displayConfirmation = false;
+
+    layoutService = inject(LayoutService);
     private authService = inject(AuthService);
-    rolUser = this.authService.getUserRole();
-    user: boolean = false;
-    displayConfirmation: boolean = false;
+    private router = inject(Router);
 
-    constructor(
-        public layoutService: LayoutService,
-        private router: Router
-    ) {
-        const roleUser = !this.authService.hasRole('CUSTOMER');
+    readonly user = this.authService.user;
+    readonly fullName = this.authService.fullName;
 
-        console.log(this.rolUser);
-
-        this.user = roleUser;
-        if (!this.user) {
-            this.layoutService.onMenuToggle();
-        }
-    }
-
-    toggleDarkMode() {
+    toggleDarkMode(): void {
         this.layoutService.layoutConfig.update((state) => ({
             ...state,
             darkTheme: !state.darkTheme
         }));
     }
 
-    goto(ruta: string) {
-        this.router.navigate([ruta]);
-    }
-
-    openConfirmation() {
+    openConfirmation(): void {
         this.displayConfirmation = true;
     }
 
-    closeConfirmation(confirmation: boolean) {
-        if (confirmation) {
-            this.authService.logout(); // 🔥 Esto limpia todo y redirige
+    closeConfirmation(confirm: boolean): void {
+        if (confirm) {
+            this.authService.logout();
         }
         this.displayConfirmation = false;
+    }
+
+    goTo(route: string): void {
+        this.router.navigate([route]);
     }
 }

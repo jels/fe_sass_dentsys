@@ -1,0 +1,465 @@
+@use '../../shared/styles/module' as m;
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+
+.dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.dash-title {
+    margin: 0 0 0.25rem;
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--p-surface-900);
+
+    :host-context(.app-dark) & {
+        color: var(--p-surface-0);
+    }
+}
+
+.dash-subtitle {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--p-surface-500);
+}
+
+.dash-date-ctrl {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+
+    .dash-date-input {
+        width: 10rem;
+    }
+}
+
+// ── KPI grid ──────────────────────────────────────────────────────────────────
+
+.kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+
+    @media (max-width: 1024px) {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    @media (max-width: 560px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.kpi-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.25rem;
+    border-radius: 0.875rem;
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-surface-200);
+    cursor: pointer;
+    transition:
+        box-shadow 0.2s,
+        transform 0.15s;
+
+    :host-context(.app-dark) & {
+        background: var(--p-surface-900);
+        border-color: var(--p-surface-700);
+    }
+
+    &:hover {
+        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+        transform: translateY(-1px);
+    }
+}
+
+.kpi-icon {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.375rem;
+
+    .kpi-patients & {
+        background: var(--p-blue-100);
+        color: var(--p-blue-600);
+    }
+    .kpi-appointments & {
+        background: var(--p-violet-100);
+        color: var(--p-violet-600);
+    }
+    .kpi-billing & {
+        background: var(--p-green-100);
+        color: var(--p-green-600);
+    }
+    .kpi-cash & {
+        background: var(--p-amber-100);
+        color: var(--p-amber-600);
+    }
+}
+
+.kpi-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    min-width: 0;
+}
+
+.kpi-value {
+    font-size: 1.625rem;
+    font-weight: 800;
+    color: var(--p-surface-900);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+
+    :host-context(.app-dark) & {
+        color: var(--p-surface-0);
+    }
+
+    &--negative {
+        color: var(--p-red-600) !important;
+    }
+}
+
+.kpi-label {
+    font-size: 0.8rem;
+    color: var(--p-surface-500);
+    font-weight: 500;
+}
+
+.kpi-sub-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.25rem;
+}
+
+.kpi-sub {
+    font-size: 0.75rem;
+    color: var(--p-surface-400);
+
+    &.income-sub {
+        color: var(--p-green-500);
+    }
+    &.expense-sub {
+        color: var(--p-red-500);
+    }
+}
+
+.kpi-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.1rem 0.45rem;
+    border-radius: 1rem;
+
+    &--new {
+        background: var(--p-blue-100);
+        color: var(--p-blue-700);
+    }
+}
+
+.kpi-progress-row {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-top: 0.3rem;
+}
+
+// ── Detail grid ───────────────────────────────────────────────────────────────
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+
+    @media (max-width: 900px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.detail-card {
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-surface-200);
+    border-radius: 0.875rem;
+    padding: 1.25rem 1.5rem;
+
+    :host-context(.app-dark) & {
+        background: var(--p-surface-900);
+        border-color: var(--p-surface-700);
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--p-surface-700);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        i {
+            color: var(--p-primary-500);
+            font-size: 0.875rem;
+        }
+    }
+}
+
+.detail-sub-title {
+    margin: 0 0 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--p-surface-400);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+// ── Appointment status list ───────────────────────────────────────────────────
+
+.appt-status-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.appt-status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &--warn {
+        background: var(--p-yellow-400);
+    }
+    &--info {
+        background: var(--p-blue-400);
+    }
+    &--success {
+        background: var(--p-green-400);
+    }
+    &--danger {
+        background: var(--p-red-400);
+    }
+    &--secondary {
+        background: var(--p-surface-300);
+    }
+}
+
+.status-name {
+    font-size: 0.82rem;
+    color: var(--p-surface-600);
+    flex: 1;
+}
+.status-count {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--p-surface-800);
+    min-width: 1.5rem;
+    text-align: right;
+}
+
+.status-bar-wrap {
+    width: 5rem;
+    height: 5px;
+    background: var(--p-surface-100);
+    border-radius: 3px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.status-bar {
+    height: 100%;
+    border-radius: 3px;
+    transition: width 0.4s ease;
+
+    &--warn {
+        background: var(--p-yellow-400);
+    }
+    &--info {
+        background: var(--p-blue-400);
+    }
+    &--success {
+        background: var(--p-green-400);
+    }
+    &--danger {
+        background: var(--p-red-400);
+    }
+    &--secondary {
+        background: var(--p-surface-300);
+    }
+}
+
+// ── Doctor list ───────────────────────────────────────────────────────────────
+
+.doctor-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.doctor-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.doctor-avatar {
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 50%;
+    background: var(--p-primary-100);
+    color: var(--p-primary-700);
+    font-size: 0.7rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+}
+
+.doctor-name {
+    font-size: 0.82rem;
+    color: var(--p-surface-600);
+    flex: 1;
+}
+.doctor-stat {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--p-surface-500);
+    min-width: 3rem;
+    text-align: right;
+}
+
+// ── Billing month stats ───────────────────────────────────────────────────────
+
+.billing-month-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0.625rem;
+}
+
+.billing-stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.bs-label {
+    font-size: 0.82rem;
+    color: var(--p-surface-500);
+}
+
+.bs-value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--p-surface-800);
+    font-variant-numeric: tabular-nums;
+
+    &--success {
+        color: var(--p-green-600);
+    }
+    &--warn {
+        color: var(--p-orange-600);
+    }
+    &--danger {
+        color: var(--p-red-600);
+    }
+}
+
+.billing-cond-row {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.cond-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.82rem;
+    color: var(--p-surface-600);
+    i {
+        font-size: 0.8rem;
+    }
+}
+
+// ── Charts grid ───────────────────────────────────────────────────────────────
+
+.charts-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+
+    @media (max-width: 900px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+.chart-card {
+    background: var(--p-surface-0);
+    border: 1px solid var(--p-surface-200);
+    border-radius: 0.875rem;
+    padding: 1.25rem 1.5rem;
+
+    :host-context(.app-dark) & {
+        background: var(--p-surface-900);
+        border-color: var(--p-surface-700);
+    }
+
+    &__header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+    }
+
+    &__title {
+        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--p-surface-700);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+
+        i {
+            color: var(--p-primary-500);
+            font-size: 0.875rem;
+        }
+    }
+}
+
+.chart-wrap {
+    height: 240px;
+
+    p-chart {
+        height: 100%;
+    }
+}

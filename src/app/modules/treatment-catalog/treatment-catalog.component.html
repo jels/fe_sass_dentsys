@@ -1,0 +1,158 @@
+<div class="module-page">
+
+    <!-- ── Header ──────────────────────────────────────────────────────────── -->
+    <div class="page-header">
+        <div class="page-title-section">
+            <h1 class="page-title"><i class="pi pi-list"></i> Catálogo de Tratamientos</h1>
+            <p class="page-subtitle">Gestión de tratamientos y precios base</p>
+        </div>
+        <div class="header-actions">
+            <p-button icon="pi pi-plus" label="Nuevo tratamiento" (onClick)="openCreate()" />
+        </div>
+    </div>
+
+    <!-- ── Filtros ──────────────────────────────────────────────────────────── -->
+    <div class="filter-bar">
+        <p-iconfield>
+            <p-inputicon class="pi pi-search" />
+            <input pInputText [(ngModel)]="search" placeholder="Buscar tratamiento..." class="filter-search" />
+        </p-iconfield>
+        <p-select [options]="categoryOptions" [(ngModel)]="filterCategory" optionLabel="label" optionValue="value"
+            placeholder="Categoría" styleClass="filter-sel" />
+        <span class="filter-count">{{ filtered.length }} resultado{{ filtered.length !== 1 ? 's' : '' }}</span>
+    </div>
+
+    <!-- ── Tabla ────────────────────────────────────────────────────────────── -->
+    <div class="table-card">
+        @if (loading()) {
+        <div class="skeleton-list">
+            @for (i of [1,2,3,4,5]; track i) { <p-skeleton height="3rem" /> }
+        </div>
+        } @else {
+        <p-table [value]="filtered" styleClass="p-datatable-sm" responsiveLayout="scroll" [rowHover]="true">
+            <ng-template pTemplate="header">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Categoría</th>
+                    <th class="text-right" style="width:140px">Precio base</th>
+                    <th class="text-center" style="width:120px">Duración</th>
+                    <th class="text-center" style="width:90px">Lab</th>
+                    <th class="text-center" style="width:100px">Estado</th>
+                    <th class="text-center" style="width:110px">Acciones</th>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="body" let-t>
+                <tr [class.row-inactive]="!t.isActive">
+                    <td>
+                        <span class="treatment-name">{{ t.name }}</span>
+                        @if (t.description) {
+                        <span class="treatment-desc">{{ t.description }}</span>
+                        }
+                    </td>
+                    <td>
+                        <span class="category-chip">{{ getCategoryLabel(t.category) }}</span>
+                    </td>
+                    <td class="text-right mono">{{ t.basePrice | guaranies }}</td>
+                    <td class="text-center">{{ t.durationMinutes }} min</td>
+                    <td class="text-center">
+                        @if (t.requiresLab) {
+                        <i class="pi pi-check-circle" style="color: var(--p-primary-500)"></i>
+                        } @else {
+                        <span style="color: var(--p-surface-300)">—</span>
+                        }
+                    </td>
+                    <td class="text-center">
+                        <p-tag [value]="t.isActive ? 'Activo' : 'Inactivo'"
+                            [severity]="t.isActive ? 'success' : 'secondary'" />
+                    </td>
+                    <td class="text-center">
+                        <div class="action-buttons">
+                            <button pButton icon="pi pi-pencil" severity="warn" [text]="true" pTooltip="Editar"
+                                (click)="openEdit(t)"></button>
+                            <button pButton [icon]="t.isActive ? 'pi pi-ban' : 'pi pi-check'"
+                                [severity]="t.isActive ? 'danger' : 'success'" [text]="true"
+                                [pTooltip]="t.isActive ? 'Desactivar' : 'Activar'" (click)="confirmToggle(t)"></button>
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+
+            <ng-template pTemplate="emptymessage">
+                <tr>
+                    <td colspan="7">
+                        <div class="empty-state">
+                            <i class="pi pi-list"></i>
+                            <p>No hay tratamientos registrados</p>
+                            <p-button icon="pi pi-plus" label="Agregar tratamiento" size="small"
+                                (onClick)="openCreate()" />
+                        </div>
+                    </td>
+                </tr>
+            </ng-template>
+        </p-table>
+        }
+    </div>
+
+</div>
+
+<!-- ── Modal Formulario ─────────────────────────────────────────────────────── -->
+<p-dialog [header]="isEditMode() ? 'Editar Tratamiento' : 'Nuevo Tratamiento'" [(visible)]="showForm" [modal]="true"
+    [draggable]="false" [style]="{ width: '560px', maxWidth: '95vw' }" (onHide)="showForm.set(false)">
+
+    <form [formGroup]="treatmentForm" class="form-body">
+
+        <div class="field">
+            <label>Nombre <span class="req">*</span></label>
+            <input pInputText formControlName="name" placeholder="Nombre del tratamiento" class="w-full" />
+            @if (isInvalid('name')) { <small class="error-msg">Requerido (mínimo 3 caracteres)</small> }
+        </div>
+
+        <div class="field">
+            <label>Descripción</label>
+            <textarea pTextarea formControlName="description" rows="2"
+                placeholder="Descripción breve del tratamiento..." class="w-full resize-none"></textarea>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Categoría <span class="req">*</span></label>
+                <p-select formControlName="category" [options]="categories" optionLabel="label" optionValue="value"
+                    placeholder="Seleccionar categoría" styleClass="w-full" appendTo="body" />
+                @if (isInvalid('category')) { <small class="error-msg">Requerido</small> }
+            </div>
+            <div class="field">
+                <label>Precio base (Gs.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="basePrice" mode="decimal" [minFractionDigits]="0"
+                    [maxFractionDigits]="0" [min]="0" placeholder="0" styleClass="w-full" />
+                @if (isInvalid('basePrice')) { <small class="error-msg">Requerido</small> }
+            </div>
+        </div>
+
+        <div class="form-grid-2">
+            <div class="field">
+                <label>Duración (min.) <span class="req">*</span></label>
+                <p-inputNumber formControlName="durationMinutes" [min]="5" [max]="480" placeholder="30"
+                    styleClass="w-full" />
+                @if (isInvalid('durationMinutes')) { <small class="error-msg">Mínimo 5 minutos</small> }
+            </div>
+            <div class="field">
+                <label>&nbsp;</label>
+                <div class="lab-check">
+                    <p-checkbox formControlName="requiresLab" [binary]="true" inputId="requiresLab" />
+                    <label for="requiresLab">Requiere laboratorio</label>
+                </div>
+            </div>
+        </div>
+
+    </form>
+
+    <ng-template pTemplate="footer">
+        <p-button label="Cancelar" severity="secondary" [text]="true" (onClick)="showForm.set(false)" />
+        <p-button [label]="isEditMode() ? 'Actualizar' : 'Crear tratamiento'" icon="pi pi-check" [loading]="saving()"
+            (onClick)="submit()" />
+    </ng-template>
+</p-dialog>
+
+<p-confirmDialog />
+<p-toast position="top-right" />

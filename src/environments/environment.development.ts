@@ -1,6 +1,6 @@
 export const environment = {
-    production: true,
-    apiUrl: 'https://api.dentsys.com.py/api',
+    production: false,
+    apiUrl: 'http://localhost:8080/api/v1/dentsys',
     appName: 'DENTSYS',
     version: '1.0.0',
     tokenKey: 'dentsys_token',

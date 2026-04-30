@@ -7,7 +7,7 @@ import { CreateDentistRequest, DentistResponse, UpdateDentistRequest } from '../
 
 @Injectable({ providedIn: 'root' })
 export class DentistService {
-    private readonly API = `${environment.apiUrl}/dentists`;
+    private readonly API = `${environment.apiUrl}/users`;
 
     constructor(private http: HttpClient) {}
 

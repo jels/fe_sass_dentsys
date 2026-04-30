@@ -8,7 +8,7 @@ import { InvoiceResponse, InvoiceStampResponse, CreateInvoiceRequest, VoidInvoic
 @Injectable({ providedIn: 'root' })
 export class InvoiceService {
     private readonly API = `${environment.apiUrl}/invoices`;
-    private readonly STAMP_API = `${environment.apiUrl}/invoice-stamps`;
+    private readonly STAMP_API = `${environment.apiUrl}/stamps`;
 
     constructor(private http: HttpClient) {}
 
